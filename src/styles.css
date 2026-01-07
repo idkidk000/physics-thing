@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light dark;
+}
+
+@theme {
+  --color-foreground: light-dark(#000, #fff);
+  --color-background: light-dark(#fff, #000);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground transition-colors duration-200;
+  }
+  div#root {
+    @apply h-dvh w-dvw;
+  }
+  .pixel {
+    image-rendering: pixelated;
+  }
+  kbd {
+    @apply font-mono bg-foreground/10 px-2 py-0.5 rounded-md border-2 border-foreground/20;
+  }
+  button {
+    @apply bg-foreground/10 px-4 py-2 rounded-md border-2 border-foreground/20 hover:bg-foreground/15 active:bg-foreground/20 transition-colors;
+  }
+}
