@@ -11,7 +11,7 @@
 
 @layer base {
   body {
-    @apply bg-background text-foreground transition-colors duration-200;
+    @apply bg-background text-foreground transition-colors duration-200 accent-pink-500;
   }
   div#root {
     @apply h-dvh w-dvw;
@@ -20,9 +20,9 @@
     image-rendering: pixelated;
   }
   kbd {
-    @apply font-mono bg-foreground/10 px-2 py-0.5 rounded-md border-2 border-foreground/20;
+    @apply font-mono bg-foreground/10 px-2 rounded-md border-2 border-foreground/20;
   }
   button {
-    @apply bg-foreground/10 px-4 py-2 rounded-md border-2 border-foreground/20 hover:bg-foreground/15 active:bg-foreground/20 transition-colors;
+    @apply bg-foreground/10 px-2 py-1 rounded-md border-2 border-foreground/20 hover:bg-foreground/15 active:bg-foreground/20 transition-colors flex gap-2;
   }
 }

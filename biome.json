@@ -14,7 +14,14 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!node_modules", "!.next", "!dist", "!build", "!samples"]
+    "includes": [
+      "**",
+      "!node_modules",
+      "!.next",
+      "!dist",
+      "!build",
+      "!samples"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -51,8 +58,24 @@
           "options": {
             "hooks": [
               {
-                "name": "useGame",
-                "stableResult": true
+                "name": "useConfig",
+                "stableResult": [
+                  "configRef",
+                  "setConfig"
+                ]
+              },
+              {
+                "name": "useCanvas",
+                "stableResult": [
+                  "canvasRef",
+                  "mouseRef"
+                ]
+              },
+              {
+                "name": "useEvent",
+                "stableResult": [
+                  "eventRef"
+                ]
               }
             ],
             "reportMissingDependenciesArray": true

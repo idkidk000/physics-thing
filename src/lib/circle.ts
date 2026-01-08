@@ -1,17 +1,22 @@
 import { type Point, type PointLike, Vector } from '@/lib/2d';
 
-const IDLE_STEPS = 10;
 const GRAVITY = new Vector({ x: 0, y: 0.01 });
-const COLLIDE_VELOCITY_RATIO = 0.8;
-const RESTITUTION_COEFFICIENT = 1;
-const VELOCITY_PRESEVE_RATIO = 0.995;
-const IDLE_THRESHOLD = 0.1;
+const COLLIDE_VELOCITY_RATIO = 0.99;
+const STEP_VELOCITY_RATIO = 0.99;
+const IDLE_STEPS = 10;
+const IDLE_THRESHOLD2 = 0.01;
+const RESTITUTION_COEFFICIENT = 0.99;
+const DRAW_SHADOW = false;
+const DRAW_HIGHLIGHT = true;
 
 export class Circle {
   #idleCount = 0;
   #radius = 0;
   #mass = 0;
   #moved = false;
+  #dragging = false;
+  immortal = false;
+  age = 0;
   constructor(
     public position: Point,
     public velocity: Vector,
@@ -46,19 +51,26 @@ export class Circle {
   get bottom() {
     return this.position.y + this.radius;
   }
-  freeze() {
-    this.#idleCount = IDLE_STEPS;
+  get dragging() {
+    return this.#dragging;
   }
-  unfreeze() {
-    this.#idleCount = 0;
+  set dragging(value: boolean) {
+    this.#dragging = value;
+    if (value) this.age = 0;
   }
   step(millis: number, bounds: PointLike): void {
-    if (this.#moved) this.#idleCount = 0;
-    else ++this.#idleCount;
-    this.velocity.multEq(VELOCITY_PRESEVE_RATIO).addEq(GRAVITY.mult(millis));
-    const offset = this.velocity.mult(millis);
-    this.#moved = Math.abs(offset.x) >= IDLE_THRESHOLD || Math.abs(offset.y) >= IDLE_THRESHOLD;
-    this.position.addEq(offset);
+    if (!this.#dragging) {
+      if (this.#moved) {
+        this.#idleCount = 0;
+        this.velocity.addEq(GRAVITY.mult(millis));
+      } else {
+        ++this.#idleCount;
+        this.velocity.addEq(GRAVITY.mult(millis * 0.05));
+      }
+      const offset = this.velocity.mult(millis);
+      this.#moved = offset.hypot2() >= IDLE_THRESHOLD2;
+      this.position.addEq(offset);
+    }
     if (this.left < 0) {
       this.position.x = this.radius;
       this.velocity.x *= -COLLIDE_VELOCITY_RATIO;
@@ -73,6 +85,7 @@ export class Circle {
       this.position.y = bounds.y - this.radius;
       this.velocity.y *= -COLLIDE_VELOCITY_RATIO;
     }
+    this.velocity.multEq(STEP_VELOCITY_RATIO);
   }
   intersects(other: Circle): boolean {
     if (other.bottom < this.top || other.top > this.bottom) return false;
@@ -99,25 +112,30 @@ export class Circle {
     context.closePath();
     context.fillStyle = `hsl(${this.hue} 100 50 / ${this.opacity}%)`;
     context.fill();
-    context.save();
-    context.clip();
 
-    // highlight
-    // context.beginPath();
-    // context.arc(this.position.x, this.position.y, this.radius, Math.PI * 0.75, Math.PI * 1.75);
-    // context.arc(this.position.x + this.radius * 0.8, this.position.y + this.radius * 0.8, this.radius * 1.5, Math.PI * 1.75, Math.PI * 0.75, true);
-    // context.closePath();
-    // context.fillStyle = `hsl(${this.hue} 100 80 / ${this.opacity}%)`;
-    // context.fill();
+    if (DRAW_HIGHLIGHT || DRAW_SHADOW) {
+      context.save();
+      context.clip();
+    }
 
-    // shadow
-    context.beginPath();
-    context.arc(this.position.x, this.position.y, this.radius, Math.PI * -0.25, Math.PI * 0.75);
-    context.arc(this.position.x - this.radius * 0.8, this.position.y - this.radius * 0.8, this.radius * 1.5, Math.PI * 0.75, Math.PI * -0.25, true);
-    context.closePath();
-    context.fillStyle = `hsl(${this.hue} 100 30 / ${this.opacity}%)`;
-    context.fill();
+    if (DRAW_HIGHLIGHT) {
+      context.beginPath();
+      context.arc(this.position.x, this.position.y, this.radius, Math.PI * 0.75, Math.PI * 1.75);
+      context.arc(this.position.x + this.radius * 0.8, this.position.y + this.radius * 0.8, this.radius * 1.5, Math.PI * 1.75, Math.PI * 0.75, true);
+      context.closePath();
+      context.fillStyle = `hsl(${this.hue} 100 80 / ${this.opacity}%)`;
+      context.fill();
+    }
 
-    context.restore();
+    if (DRAW_SHADOW) {
+      context.beginPath();
+      context.arc(this.position.x, this.position.y, this.radius, Math.PI * -0.25, Math.PI * 0.75);
+      context.arc(this.position.x - this.radius * 0.8, this.position.y - this.radius * 0.8, this.radius * 1.5, Math.PI * 0.75, Math.PI * -0.25, true);
+      context.closePath();
+      context.fillStyle = `hsl(${this.hue} 100 30 / ${this.opacity}%)`;
+      context.fill();
+    }
+
+    if (DRAW_HIGHLIGHT || DRAW_SHADOW) context.restore();
   }
 }

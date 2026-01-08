@@ -1,0 +1,31 @@
+import { type ChangeEvent, useCallback, useId } from 'react';
+
+export function Range({
+  min,
+  max,
+  step = 1,
+  value,
+  onValueChange,
+  name,
+  unit = '',
+}: {
+  min: number;
+  max: number;
+  step?: number;
+  value: number;
+  onValueChange: (value: number) => void;
+  name: string;
+  unit?: string;
+}) {
+  const id = useId();
+
+  const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => onValueChange(event.target.valueAsNumber), [onValueChange]);
+
+  return (
+    <div className='flex flex-row gap-2 items-center flex-wrap justify-center'>
+      <label htmlFor={id}>{name}</label>
+      <input id={id} type='range' min={min} max={max} step={step} value={value} onChange={handleChange} />
+      <span>{`${value.toLocaleString()}${unit}`}</span>
+    </div>
+  );
+}
