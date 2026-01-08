@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/suspicious/useAdjacentOverloadSignatures: biome bug */
+
 interface PointOrVectorLike {
   x: number;
   y: number;
@@ -162,6 +163,9 @@ export class Vector extends PointOrVector<VectorLike> {
   rotate(radians: number): Vector {
     return new Vector(Vector.rotate(this, radians));
   }
+  dot(other: VectorLike): number {
+    return Vector.dot(this, other);
+  }
 
   unitEq(): this {
     const { x, y } = Vector.unit(this);
@@ -176,7 +180,7 @@ export class Vector extends PointOrVector<VectorLike> {
 
   static unit(item: VectorLike): VectorLike {
     const hypot = PointOrVector.hypot(item);
-    return { x: item.x / hypot, y: item.y / hypot };
+    return { x: item.x / (hypot || 1), y: item.y / (hypot || 1) };
   }
   static rotate(item: VectorLike, radians: number): VectorLike {
     // https://www.geeksforgeeks.org/maths/rotation-matrix/
@@ -185,6 +189,9 @@ export class Vector extends PointOrVector<VectorLike> {
       x: cos * item.x - sin * item.y,
       y: sin * item.x + cos * item.y,
     };
+  }
+  static dot(item: VectorLike, other: VectorLike): number {
+    return item.x * other.x + item.y * other.y;
   }
 }
 
