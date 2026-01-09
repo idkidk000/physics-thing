@@ -58,13 +58,9 @@ export class Circle {
     const config = this.#configRef.current;
     const idleThreshold2 = config.idleThreshold ** 2;
     if (!this.#dragging) {
-      if (this.#moved) {
-        this.#idleCount = 0;
-        this.velocity.addEq(config.gravity).mult(millis);
-      } else {
-        ++this.#idleCount;
-        this.velocity.addEq(config.gravity).mult(millis * 0.05);
-      }
+      this.velocity.addEq(Vector.mult(config.gravity, 0.03));
+      if (this.#moved) this.#idleCount = 0;
+      else ++this.#idleCount;
       const offset = this.velocity.mult(millis);
       this.#moved = offset.hypot2() >= idleThreshold2;
       this.position.addEq(offset);

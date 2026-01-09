@@ -79,10 +79,10 @@ export function Sidebar() {
           <Range min={1} max={20} name='Physics steps' value={config.physicsSteps} onValueChange={handlePhysicsStepsChange} />
           <Range min={1} max={config.radiusMax} name='Radius min' value={config.radiusMin} onValueChange={handleRadiusMinChange} />
           <Range min={config.radiusMin} max={200} name='Radius max' value={config.radiusMax} onValueChange={handleRadiusMaxChange} />
-          <VectorPicker range={0.05} name='Gravity' value={config.gravity} onValueChange={handleGravityChange} />
-          <Range min={0.8} max={1.2} step={0.01} name='Collide velocity' value={config.collideVelocityRatio} onValueChange={handleCollideVelocityRatioChange} />
-          <Range min={0.8} max={1.2} step={0.01} name='Step velocity' value={config.stepVelocityRatio} onValueChange={handleStepVelocityRatioChange} />
-          <Range min={0.8} max={1.2} step={0.01} name='Restitution' value={config.restitutionCoefficient} onValueChange={handleRestitutionCoefficientChange} />
+          <VectorPicker range={1} digits={3} name='Gravity' value={config.gravity} onValueChange={handleGravityChange} />
+          <Range min={0.9} max={1} step={0.001} name='Collide velocity' value={config.collideVelocityRatio} onValueChange={handleCollideVelocityRatioChange} />
+          <Range min={0.9} max={1} step={0.001} name='Step velocity' value={config.stepVelocityRatio} onValueChange={handleStepVelocityRatioChange} />
+          <Range min={0.9} max={1} step={0.001} name='Restitution' value={config.restitutionCoefficient} onValueChange={handleRestitutionCoefficientChange} />
           <Range min={1} max={100} step={1} name='Idle steps' value={config.idleSteps} onValueChange={handleIdleStepsChange} />
           <Range min={0.01} max={1} step={0.01} name='Idle threshold' value={config.idleThreshold} onValueChange={handleIdleThresholdChange} />
           <Range min={0} max={100} step={1} name='Initial objects' value={config.initialObjects} onValueChange={handleInitialObjectsChange} />
