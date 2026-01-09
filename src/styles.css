@@ -4,14 +4,21 @@
   color-scheme: light dark;
 }
 
-@theme {
-  --color-foreground: light-dark(#000, #fff);
-  --color-background: light-dark(#fff, #000);
+@theme inline {
+  --color-foreground: light-dark(var(--color-gray-950), var(--color-gray-50));
+  --color-background: light-dark(var(--color-gray-50), var(--color-gray-950));
+  --color-accent: light-dark(var(--color-violet-400), var(--color-violet-600));
+  --color-utility: light-dark(var(--color-gray-700), var(--color-gray-300));
+
+  --color-border: hsl(from var(--color-utility) h s l / 30%);
+  --color-button: hsl(from var(--color-utility) h s l / 5%);
+  --color-button-hover: hsl(from var(--color-utility) h s l / 15%);
+  --color-button-active: hsl(from var(--color-utility) h s l / 25%);
 }
 
 @layer base {
   body {
-    @apply bg-background text-foreground transition-colors duration-200 accent-pink-500;
+    @apply bg-background text-foreground transition-colors duration-200 accent-accent;
   }
   div#root {
     @apply h-dvh w-dvw;
@@ -20,9 +27,40 @@
     image-rendering: pixelated;
   }
   kbd {
-    @apply font-mono bg-foreground/10 px-2 rounded-md border-2 border-foreground/20;
+    @apply font-mono bg-button px-2 rounded-md border border-border;
   }
   button {
-    @apply bg-foreground/10 px-2 py-1 rounded-md border-2 border-foreground/20 hover:bg-foreground/15 active:bg-foreground/20 transition-colors flex gap-2;
+    @apply bg-button px-2 py-1 rounded-md border border-border hover:bg-button-hover active:bg-button-active transition-colors flex gap-2 shadow;
+  }
+  .vector-picker {
+    /* outer is 1/Math.SQRT_2 === 71%, which already has a border */
+    background:
+      radial-gradient(
+        transparent 10%,
+        var(--color-border) 10%,
+        var(--color-border) 11%,
+        transparent 11%,
+        transparent 20%,
+        var(--color-border) 20%,
+        var(--color-border) 21%,
+        transparent 21%,
+        transparent 30%,
+        var(--color-border) 30%,
+        var(--color-border) 31%,
+        transparent 31%,
+        transparent 40%,
+        var(--color-border) 40%,
+        var(--color-border) 41%,
+        transparent 41%,
+        transparent 50%,
+        var(--color-border) 50%,
+        var(--color-border) 51%,
+        transparent 51%,
+        transparent 60%,
+        var(--color-border) 60%,
+        var(--color-border) 61%,
+        transparent 61%
+      ), linear-gradient(transparent 49%, var(--color-border) 49%, var(--color-border) 51%, transparent 51%),
+      linear-gradient(to right, transparent 49%, var(--color-border) 49%, var(--color-border) 51%, transparent 51%);
   }
 }

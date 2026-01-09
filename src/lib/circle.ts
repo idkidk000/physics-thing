@@ -1,13 +1,6 @@
+import type { RefObject } from 'react';
+import type { Config } from '@/hooks/config';
 import { type Point, type PointLike, Vector } from '@/lib/2d';
-
-const GRAVITY = new Vector({ x: 0, y: 0.01 });
-const COLLIDE_VELOCITY_RATIO = 0.99;
-const STEP_VELOCITY_RATIO = 0.99;
-const IDLE_STEPS = 10;
-const IDLE_THRESHOLD2 = 0.01;
-const RESTITUTION_COEFFICIENT = 0.99;
-const DRAW_SHADOW = false;
-const DRAW_HIGHLIGHT = true;
 
 export class Circle {
   #idleCount = 0;
@@ -17,17 +10,20 @@ export class Circle {
   #dragging = false;
   immortal = false;
   age = 0;
+  #configRef: RefObject<Config>;
   constructor(
+    configRef: RefObject<Config>,
     public position: Point,
     public velocity: Vector,
     radius: number,
     public hue: number,
     public opacity: number = 100
   ) {
+    this.#configRef = configRef;
     this.radius = radius;
   }
   get idle() {
-    return this.#idleCount >= IDLE_STEPS;
+    return this.#idleCount >= this.#configRef.current.idleSteps;
   }
   get radius() {
     return this.#radius;
@@ -59,33 +55,35 @@ export class Circle {
     if (value) this.age = 0;
   }
   step(millis: number, bounds: PointLike): void {
+    const config = this.#configRef.current;
+    const idleThreshold2 = config.idleThreshold ** 2;
     if (!this.#dragging) {
       if (this.#moved) {
         this.#idleCount = 0;
-        this.velocity.addEq(GRAVITY.mult(millis));
+        this.velocity.addEq(config.gravity).mult(millis);
       } else {
         ++this.#idleCount;
-        this.velocity.addEq(GRAVITY.mult(millis * 0.05));
+        this.velocity.addEq(config.gravity).mult(millis * 0.05);
       }
       const offset = this.velocity.mult(millis);
-      this.#moved = offset.hypot2() >= IDLE_THRESHOLD2;
+      this.#moved = offset.hypot2() >= idleThreshold2;
       this.position.addEq(offset);
     }
     if (this.left < 0) {
       this.position.x = this.radius;
-      this.velocity.x *= -COLLIDE_VELOCITY_RATIO;
+      this.velocity.x *= -config.collideVelocityRatio;
     } else if (this.right > bounds.x) {
       this.position.x = bounds.x - this.radius;
-      this.velocity.x *= -COLLIDE_VELOCITY_RATIO;
+      this.velocity.x *= -config.collideVelocityRatio;
     }
     if (this.top < 0) {
       this.position.y = this.radius;
-      this.velocity.y *= -COLLIDE_VELOCITY_RATIO;
+      this.velocity.y *= -config.collideVelocityRatio;
     } else if (this.bottom > bounds.y) {
       this.position.y = bounds.y - this.radius;
-      this.velocity.y *= -COLLIDE_VELOCITY_RATIO;
+      this.velocity.y *= -config.collideVelocityRatio;
     }
-    this.velocity.multEq(STEP_VELOCITY_RATIO);
+    this.velocity.multEq(config.stepVelocityRatio);
   }
   intersects(other: Circle): boolean {
     if (other.bottom < this.top || other.top > this.bottom) return false;
@@ -100,11 +98,11 @@ export class Circle {
 
     if (normalVelocityDp > 0) return;
 
-    const impulse = (-(1 + RESTITUTION_COEFFICIENT) * normalVelocityDp) / (1 / this.mass + 1 / other.mass);
+    const impulse = (-(1 + this.#configRef.current.restitutionCoefficient) * normalVelocityDp) / (1 / this.mass + 1 / other.mass);
     const impulseVector = collisionNormal.mult(impulse);
 
-    this.velocity.subEq(impulseVector.div(this.mass)).multEq(COLLIDE_VELOCITY_RATIO);
-    other.velocity.addEq(impulseVector.div(other.mass)).multEq(COLLIDE_VELOCITY_RATIO);
+    this.velocity.subEq(impulseVector.div(this.mass)).multEq(this.#configRef.current.collideVelocityRatio);
+    other.velocity.addEq(impulseVector.div(other.mass)).multEq(this.#configRef.current.collideVelocityRatio);
   }
   draw(context: CanvasRenderingContext2D): void {
     context.beginPath();
@@ -113,12 +111,12 @@ export class Circle {
     context.fillStyle = `hsl(${this.hue} 100 50 / ${this.opacity}%)`;
     context.fill();
 
-    if (DRAW_HIGHLIGHT || DRAW_SHADOW) {
+    if (this.#configRef.current.drawHighlight || this.#configRef.current.drawShadow) {
       context.save();
       context.clip();
     }
 
-    if (DRAW_HIGHLIGHT) {
+    if (this.#configRef.current.drawHighlight) {
       context.beginPath();
       context.arc(this.position.x, this.position.y, this.radius, Math.PI * 0.75, Math.PI * 1.75);
       context.arc(this.position.x + this.radius * 0.8, this.position.y + this.radius * 0.8, this.radius * 1.5, Math.PI * 1.75, Math.PI * 0.75, true);
@@ -127,7 +125,7 @@ export class Circle {
       context.fill();
     }
 
-    if (DRAW_SHADOW) {
+    if (this.#configRef.current.drawShadow) {
       context.beginPath();
       context.arc(this.position.x, this.position.y, this.radius, Math.PI * -0.25, Math.PI * 0.75);
       context.arc(this.position.x - this.radius * 0.8, this.position.y - this.radius * 0.8, this.radius * 1.5, Math.PI * 0.75, Math.PI * -0.25, true);
@@ -136,6 +134,6 @@ export class Circle {
       context.fill();
     }
 
-    if (DRAW_HIGHLIGHT || DRAW_SHADOW) context.restore();
+    if (this.#configRef.current.drawHighlight || this.#configRef.current.drawShadow) context.restore();
   }
 }

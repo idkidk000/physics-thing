@@ -2,7 +2,7 @@ import { createContext, type ReactNode, type RefObject, useCallback, useContext,
 
 type Callback = () => unknown;
 
-class EventEmitter<EventId extends string> {
+export class EventEmitter<EventId extends string> {
   #map = new Map<EventId, Set<Callback>>();
   emit(event: EventId): void {
     this.#map
@@ -28,11 +28,12 @@ export const events = [
   { id: 'grow', keyName: 'g', label: 'Grow' },
   { id: 'immortal', keyName: 'i', label: 'Toggle immortal' },
   { id: 'pause', keyName: 'p', label: 'Toggle paused' },
-  { id: 'reload', keyName: 'r', label: 'Reload renderer' },
+  { id: 'reload', keyName: 'l', label: 'Reload renderer' },
+  { id: 'reset', keyName: 'r', label: 'Reset config' },
   { id: 'step', keyName: 's', label: 'Single step' },
 ] as const satisfies Event[];
 
-type EventId = (typeof events)[number]['id'];
+export type EventId = (typeof events)[number]['id'];
 
 interface Context {
   eventRef: RefObject<EventEmitter<EventId>>;
@@ -69,7 +70,7 @@ function HotKey({
   keyName: key,
   label,
   className,
-  clickClass = 'bg-foreground/20',
+  clickClass = 'bg-button-active',
   clickMillis = 200,
 }: Event & { className: string; clickClass?: string; clickMillis?: number }) {
   const { eventRef } = useEvent();

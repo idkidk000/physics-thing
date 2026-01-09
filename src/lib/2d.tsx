@@ -12,7 +12,7 @@ export interface VectorLike extends PointOrVectorLike {}
 abstract class PointOrVector<Interface extends PointOrVectorLike> {
   x: number;
   y: number;
-  // actually return ThisType<Interface> but it doesn't simplify to Point or Vector
+  // actually returns ThisType<Interface> but it doesn't simplify to Point or Vector
   #typedConstructor = this.constructor as new (...params: ConstructorParameters<typeof PointOrVector<PointOrVectorLike>>) => this;
   constructor(...params: [x: number, y: number] | [object: PointOrVectorLike]) {
     if (params.length === 2 && typeof params[0] === 'number' && typeof params[1] === 'number') {
@@ -135,6 +135,7 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   static clamp(item: PointOrVectorLike, min: PointOrVectorLike, max: PointOrVectorLike): PointOrVectorLike {
     return { x: Math.min(Math.max(min.x, item.x), max.x), y: Math.min(Math.max(min.y, item.y), max.y) };
   }
+
   static hypot2(...params: [item: PointOrVectorLike] | [item: PointOrVectorLike, other: PointOrVectorLike]): number {
     if (params.length === 1) return params[0].x ** 2 + params[0].y ** 2;
     if (params.length === 2) return (params[1].x - params[0].x) ** 2 + (params[1].y - params[0].y) ** 2;
@@ -154,7 +155,11 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   }
 }
 
-export class Point extends PointOrVector<PointLike> {}
+export class Point extends PointOrVector<PointLike> {
+  toVector(): Vector {
+    return new Vector(this);
+  }
+}
 
 export class Vector extends PointOrVector<VectorLike> {
   unit(): Vector {
@@ -176,6 +181,10 @@ export class Vector extends PointOrVector<VectorLike> {
     const { x, y } = Vector.rotate(this, radians);
     [this.x, this.y] = [x, y];
     return this;
+  }
+
+  toPoint(): Point {
+    return new Point(this);
   }
 
   static unit(item: VectorLike): VectorLike {

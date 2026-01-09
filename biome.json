@@ -14,14 +14,7 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": [
-      "**",
-      "!node_modules",
-      "!.next",
-      "!dist",
-      "!build",
-      "!samples"
-    ]
+    "includes": ["**", "!node_modules", "!.next", "!dist", "!build", "!samples"]
   },
   "formatter": {
     "enabled": true,
@@ -59,23 +52,19 @@
             "hooks": [
               {
                 "name": "useConfig",
-                "stableResult": [
-                  "configRef",
-                  "setConfig"
-                ]
+                "stableResult": ["configRef", "setConfig"]
               },
               {
                 "name": "useCanvas",
-                "stableResult": [
-                  "canvasRef",
-                  "mouseRef"
-                ]
+                "stableResult": ["canvasRef", "mouseRef"]
               },
               {
                 "name": "useEvent",
-                "stableResult": [
-                  "eventRef"
-                ]
+                "stableResult": ["eventRef"]
+              },
+              {
+                "name": "useSimulation",
+                "stableResult": ["simulationRef"]
               }
             ],
             "reportMissingDependenciesArray": true

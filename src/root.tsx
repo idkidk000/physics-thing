@@ -1,7 +1,9 @@
 import App from '@/app';
+import { Sidebar } from '@/components/sidebar';
 import { CanvasProvider } from '@/hooks/canvas';
 import { ConfigProvider } from '@/hooks/config';
 import { EventProvider } from '@/hooks/event';
+import { SimulationProvider } from '@/hooks/simulation';
 import '@/styles.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -14,7 +16,10 @@ createRoot(root).render(
     <EventProvider>
       <ConfigProvider>
         <CanvasProvider>
-          <App />
+          <SimulationProvider>
+            <Sidebar />
+            <App />
+          </SimulationProvider>
         </CanvasProvider>
       </ConfigProvider>
     </EventProvider>

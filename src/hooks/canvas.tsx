@@ -32,7 +32,7 @@ export function useCanvas() {
   return context;
 }
 
-export function Canvas({ className }: { className: string }) {
+export function Canvas() {
   const { canvasRef, mouseRef } = useCanvas();
 
   const handleMouseMove = useCallback((event: MouseEvent<HTMLCanvasElement>) => {
@@ -76,7 +76,7 @@ export function Canvas({ className }: { className: string }) {
 
   return (
     <canvas
-      className={className}
+      className='size-full touch-none overflow-hidden'
       ref={canvasRef}
       onMouseMove={handleMouseMove}
       onContextMenu={handleMouseRightClick}
