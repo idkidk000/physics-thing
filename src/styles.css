@@ -7,7 +7,7 @@
 @theme inline {
   --color-foreground: light-dark(var(--color-gray-950), var(--color-gray-50));
   --color-background: light-dark(var(--color-gray-50), var(--color-gray-950));
-  --color-accent: light-dark(var(--color-violet-400), var(--color-violet-600));
+  --color-accent: light-dark(var(--color-violet-800), var(--color-violet-600));
   --color-utility: light-dark(var(--color-gray-700), var(--color-gray-300));
 
   --color-border: hsl(from var(--color-utility) h s l / 30%);
@@ -30,7 +30,10 @@
     @apply font-mono bg-button px-2 rounded-md border border-border;
   }
   button {
-    @apply bg-button px-2 py-1 rounded-md border border-border hover:bg-button-hover active:bg-button-active transition-colors flex gap-2 shadow;
+    @apply bg-button px-2 py-1 rounded-md border border-border hover:bg-button-hover active:bg-button-active transition-colors flex gap-2 shadow items-center;
+  }
+  hr {
+    @apply text-border m-2;
   }
   .vector-picker {
     /* outer is 1/Math.SQRT_2 === 71%, which already has a border */
@@ -62,5 +65,43 @@
         transparent 61%
       ), linear-gradient(transparent 49%, var(--color-border) 49%, var(--color-border) 51%, transparent 51%),
       linear-gradient(to right, transparent 49%, var(--color-border) 49%, var(--color-border) 51%, transparent 51%);
+  }
+  input[type="range"] {
+    appearance: unset;
+    -moz-appearance: none;
+    -webkit-appearance: none;
+    /* selecting multiple browser prefixes at once, i.e. `&::-moz-range-thumb, &::-webkit-slider-thumb` doesn't work */
+    &::-moz-range-thumb {
+      appearance: none;
+      background-color: var(--color-accent);
+      border-color: var(--color-background);
+      border-radius: 0.5em;
+      border-width: 0.25em;
+      height: 1em;
+      width: 1em;
+    }
+    &::-moz-range-track {
+      appearance: none;
+      background-color: var(--color-accent);
+      height: 0.25em;
+    }
+    &::-webkit-slider-thumb {
+      appearance: none;
+      /* chromium really resets everything */
+      border-style: solid;
+      box-sizing: content-box;
+      translate: 0 -0.57em;
+      background-color: var(--color-accent);
+      border-color: var(--color-background);
+      border-radius: 0.5em;
+      border-width: 0.25em;
+      height: 1em;
+      width: 1em;
+    }
+    &::-webkit-slider-runnable-track {
+      appearance: none;
+      background-color: var(--color-accent);
+      height: 0.25em;
+    }
   }
 }

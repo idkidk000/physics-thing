@@ -23,13 +23,14 @@ interface Event {
 }
 
 export const events = [
-  { id: 'clear', keyName: 'c', label: 'Clear' },
+  { id: 'reset', keyName: 'r', label: 'Reset simulation' },
   { id: 'dump', keyName: 'd', label: 'Dump to console' },
+  { id: 'fullscreen', keyName: 'f', label: 'Toggle fullscreen' },
   { id: 'grow', keyName: 'g', label: 'Grow' },
   { id: 'immortal', keyName: 'i', label: 'Toggle immortal' },
   { id: 'pause', keyName: 'p', label: 'Toggle paused' },
   { id: 'reload', keyName: 'l', label: 'Reload renderer' },
-  { id: 'reset', keyName: 'r', label: 'Reset config' },
+  { id: 'defaults', keyName: 'c', label: 'Reset config' },
   { id: 'step', keyName: 's', label: 'Single step' },
 ] as const satisfies Event[];
 
@@ -46,11 +47,19 @@ export function EventProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const controller = new AbortController();
+
     // biome-ignore format: no
     document.addEventListener('keydown', (event) => {
       const activeEvent = events.find((item) => item.keyName === event.key);
       if (activeEvent) eventRef.current.emit(activeEvent.id);
     }, { signal: controller.signal });
+
+    // biome-ignore format: no
+    eventRef.current.subscribe('fullscreen', () => {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.body.requestFullscreen();
+    }, controller.signal);
+
     return () => controller.abort();
   }, []);
 

@@ -23,15 +23,15 @@ export interface Config {
 }
 
 export const defaultConfig: Config = {
-  dragVelocity: 0.05,
+  dragVelocity: 0.25,
   hueCenter: 275,
   hueRange: 50,
   maxAge: 0,
-  physicsSteps: 10,
+  physicsSteps: 5,
   radiusMin: 20,
   radiusMax: 50,
   paused: false,
-  gravity: { x: 0, y: 1 },
+  gravity: { x: 0, y: 0.2 },
   collideVelocityRatio: 0.99,
   stepVelocityRatio: 0.997,
   idleSteps: 10,
@@ -58,7 +58,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const controller = new AbortController();
     eventRef.current.subscribe('pause', () => setConfig((prev) => ({ ...prev, paused: !prev.paused })), controller.signal);
-    eventRef.current.subscribe('reset', () => setConfig(defaultConfig), controller.signal);
+    eventRef.current.subscribe('defaults', () => setConfig(defaultConfig), controller.signal);
     return () => controller.abort();
   }, []);
 

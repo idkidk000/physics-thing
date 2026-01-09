@@ -19,7 +19,7 @@ export function VectorPicker({
   const id = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<HTMLDivElement>(null);
-  const valueRef = useRef({ ...value });
+  const deferredValueRef = useRef({ ...value });
   const spanRef = useRef<HTMLSpanElement>(null);
   const timeoutRef = useRef<number | null>(null);
 
@@ -40,12 +40,12 @@ export function VectorPicker({
 
   useEffect(() => updateControl(value), [value, updateControl]);
 
-  const sendUpdatedValue = useCallback(() => {
+  const sendDeferredValue = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    onValueChange({ ...valueRef.current });
+    onValueChange({ ...deferredValueRef.current });
   }, [onValueChange]);
 
   // biome-ignore format: no
@@ -63,11 +63,11 @@ export function VectorPicker({
       const relative = Point.sub(position, center);
       const value = Point.mult(Point.div(relative, radius), range);
       console.debug('handleTouchMove', 'relative', relative, { radius }, 'value', value);
-      valueRef.current = value;
-      timeoutRef.current ??= setTimeout(sendUpdatedValue, updateMillis);
+      deferredValueRef.current = value;
+      timeoutRef.current ??= setTimeout(sendDeferredValue, updateMillis);
       updateControl(value);
     });
-  }, [range, sendUpdatedValue, updateControl, updateMillis]);
+  }, [range, sendDeferredValue, updateControl, updateMillis]);
 
   // biome-ignore format: no
   const handleMouseMove = useCallback((event: MouseEvent<HTMLDivElement>) => {
@@ -83,7 +83,7 @@ export function VectorPicker({
   }), [digits]);
 
   return (
-    <div className='grid grid-cols-[1fr_auto] grid-rows-2 gap-2 items-center flex-wrap'>
+    <div className='grid grid-cols-[1fr_auto] grid-rows-2 gap-x-2 items-end'>
       <label htmlFor={id} className='row-start-1 col-start-1'>
         {name}
       </label>
@@ -92,13 +92,13 @@ export function VectorPicker({
         id={id}
         className='size-40 border-2 border-border rounded-full relative row-start-1 col-start-2 row-span-2 vector-picker touch-none'
         onMouseMove={handleMouseMove}
-        onMouseUp={sendUpdatedValue}
-        onTouchEnd={sendUpdatedValue}
+        onMouseUp={sendDeferredValue}
+        onTouchEnd={sendDeferredValue}
         onTouchMove={handleTouchMove}
       >
-        <div ref={dragRef} className='size-5 rounded-full bg-utility/80 border-2 border-background shadow absolute -translate-x-1/2 -translate-y-1/2'></div>
+        <div ref={dragRef} className='size-5.5 rounded-md bg-accent border-3 border-background shadow absolute -translate-1/2'></div>
       </div>
-      <span ref={spanRef} className='row-start-2 col-start-1' style={spanStyle} />
+      <span ref={spanRef} className='row-start-2 col-start-1 self-start' style={spanStyle} />
     </div>
   );
 }

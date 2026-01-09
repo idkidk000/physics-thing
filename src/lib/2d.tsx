@@ -257,7 +257,7 @@ export class Line {
       : undefined;
   }
 
-  static is(item: unknown): item is PointLike {
+  static is(item: unknown): item is Line {
     return typeof item === 'object' && item !== null && 'a' in item && 'b' in item && PointOrVector.is(item.a) && PointOrVector.is(item.b);
   }
 }

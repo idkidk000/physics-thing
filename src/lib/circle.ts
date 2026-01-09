@@ -89,7 +89,7 @@ export class Circle {
     // https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/23-SAP.html
     // https://youtu.be/euypZDssYxE
     if (!this.intersects(other)) return;
-    const collisionNormal = new Vector(other.position.sub(this.position)).unitEq();
+    const collisionNormal = other.position.sub(this.position).toVector().unitEq();
     const normalVelocityDp = other.velocity.sub(this.velocity).dot(collisionNormal);
 
     if (normalVelocityDp > 0) return;

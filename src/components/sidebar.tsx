@@ -47,7 +47,12 @@ export function Sidebar() {
 
   return (
     <>
-      <button type='button' onClick={toggleOpen} className='fixed top-0 left-0 px-4 py-2 m-2 rounded bg-background border-2 border-border z-20'>
+      <button
+        type='button'
+        onClick={toggleOpen}
+        className='fixed top-0 left-0 px-4 py-2 m-2 rounded bg-background border-2 border-border z-20 group'
+        aria-expanded={state === SidebarState.Open}
+      >
         <svg
           width='24'
           height='24'
@@ -60,35 +65,55 @@ export function Sidebar() {
           role='graphics-symbol'
           aria-label='Menu'
         >
-          <path d='M4 5h16' />
-          <path d='M4 12h16' />
-          <path d='M4 19h16' />
+          <path
+            d='M4 12h16'
+            className='origin-center transition-transform -translate-y-[7px] group-aria-expanded:rotate-38 group-aria-expanded:scale-x-130 group-aria-expanded:translate-y-0'
+          />
+          <path d='M4 12h16' className='origin-center transition-opacity  group-aria-expanded:opacity-0' />
+          <path
+            d='M4 12h16'
+            className='origin-center transition-transform translate-y-[7px] group-aria-expanded:-rotate-38 group-aria-expanded:scale-x-130 group-aria-expanded:translate-y-0'
+          />
         </svg>
       </button>
-      <div className={`fixed inset-0 ${state === SidebarState.Closed ? '-z-10' : ''}`} onClick={toggleOpen}>
-        <div className={`size-full transition-[background-color] duration-300 ${state === SidebarState.Open ? 'bg-black/50' : 'bg-transparent'}`} />
-      </div>
       <div
-        className={`fixed top-0 left-0 bottom-0 w-auto z-10 transition-[translate] transition-discrete border-2 border-border rounded bg-background pt-16 ${state === SidebarState.Open ? '' : '-translate-x-full'}`}
+        className={`fixed inset-0 starting:bg-transparent transition-[background-color] duration-300 ${state === SidebarState.Closed ? 'hidden' : state === SidebarState.Closing ? 'bg-transparent' : 'bg-black/50'}`}
+        onClick={toggleOpen}
+      />
+      <div
+        className='fixed top-0 left-0 bottom-0 w-auto z-10 transition-[translate] transition-discrete border-2 border-border rounded bg-background aria-hidden:-translate-x-full'
+        role='dialog'
+        aria-hidden={state !== SidebarState.Open}
       >
-        <div className='flex flex-col gap-2 size-full p-2 select-none overflow-y-auto'>
-          <Range min={0} max={10000} step={100} name='Max age' value={config.maxAge} onValueChange={handleMaxAgeChange} />
-          <Range min={0} max={0.1} step={0.01} name='Drag velocity' value={config.dragVelocity} onValueChange={handleDragVelocityChange} />
-          <Range min={0} max={359} name='Hue center' value={config.hueCenter} onValueChange={handleHueCenterChange} />
-          <Range min={0} max={180} name='Hue range' value={config.hueRange} onValueChange={handleHueRangeChange} />
-          <Range min={1} max={20} name='Physics steps' value={config.physicsSteps} onValueChange={handlePhysicsStepsChange} />
-          <Range min={1} max={config.radiusMax} name='Radius min' value={config.radiusMin} onValueChange={handleRadiusMinChange} />
-          <Range min={config.radiusMin} max={200} name='Radius max' value={config.radiusMax} onValueChange={handleRadiusMaxChange} />
+        <div className='flex flex-col gap-2 size-full p-4 select-none overflow-y-auto'>
           <VectorPicker range={1} digits={3} name='Gravity' value={config.gravity} onValueChange={handleGravityChange} />
+          <Range min={0.1} max={0.5} step={0.01} name='Drag velocity' value={config.dragVelocity} onValueChange={handleDragVelocityChange} />
           <Range min={0.9} max={1} step={0.001} name='Collide velocity' value={config.collideVelocityRatio} onValueChange={handleCollideVelocityRatioChange} />
           <Range min={0.9} max={1} step={0.001} name='Step velocity' value={config.stepVelocityRatio} onValueChange={handleStepVelocityRatioChange} />
           <Range min={0.9} max={1} step={0.001} name='Restitution' value={config.restitutionCoefficient} onValueChange={handleRestitutionCoefficientChange} />
+
+          <hr />
+
+          <Range min={1} max={20} name='Physics steps' value={config.physicsSteps} onValueChange={handlePhysicsStepsChange} />
           <Range min={1} max={100} step={1} name='Idle steps' value={config.idleSteps} onValueChange={handleIdleStepsChange} />
           <Range min={0.01} max={1} step={0.01} name='Idle threshold' value={config.idleThreshold} onValueChange={handleIdleThresholdChange} />
+          <hr />
+
+          <Range min={0} max={10000} step={100} name='Max age' value={config.maxAge} onValueChange={handleMaxAgeChange} />
           <Range min={0} max={100} step={1} name='Initial objects' value={config.initialObjects} onValueChange={handleInitialObjectsChange} />
+          <hr />
+
+          <Range min={1} max={config.radiusMax} name='Radius min' value={config.radiusMin} onValueChange={handleRadiusMinChange} />
+          <Range min={config.radiusMin} max={200} name='Radius max' value={config.radiusMax} onValueChange={handleRadiusMaxChange} />
+          <Range min={0} max={359} name='Hue center' value={config.hueCenter} onValueChange={handleHueCenterChange} />
+          <Range min={0} max={180} name='Hue range' value={config.hueRange} onValueChange={handleHueRangeChange} />
           <Checkbox name='Draw shadow' value={config.drawShadow} onValueChange={handleDrawShadowChange} />
           <Checkbox name='Draw highlight' value={config.drawHighlight} onValueChange={handleDrawHighlightChange} />
-          <HotKeys className='flex gap-2 items-center mx-auto' />
+
+          <hr />
+          <div className='grid grid-cols-2 gap-2'>
+            <HotKeys className='flex gap-2 items-center' />
+          </div>
         </div>
       </div>
     </>

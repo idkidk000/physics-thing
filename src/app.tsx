@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Canvas, useCanvas } from '@/hooks/canvas';
 import { useConfig } from '@/hooks/config';
 import { useEvent } from '@/hooks/event';
@@ -23,6 +23,7 @@ export default function App() {
   const { canvasRef } = useCanvas();
   const { eventRef } = useEvent();
   const { simulationRef } = useSimulation();
+  const stepState = useRef({ prev: 0, allowOne: false });
 
   // biome-ignore lint/correctness/useExhaustiveDependencies(reload): deliberate
   useEffect(() => {
@@ -30,25 +31,25 @@ export default function App() {
     const context = canvasRef.current.getContext('2d');
     if (!context) throw new Error('oh no');
     const controller = new AbortController();
-    let prevTime = 0;
 
     eventRef.current.subscribe('reload', () => setReload(Math.random()), controller.signal);
     // biome-ignore format: no
     eventRef.current.subscribe('step', () => {
       if (!configRef.current.paused) setConfig((prev) => ({ ...prev, paused: true }));
-      step(prevTime + 1000 / 60, true);
+      stepState.current.allowOne = true;
     }, controller.signal );
 
-    function step(time: number, force = false) {
+    function step(time: number) {
       if (!controller.signal.aborted) requestAnimationFrame(step);
-      if (configRef.current.paused && !force) return;
-      if (!canvasRef.current) throw new Error('oh no');
-      if (!context) throw new Error('oh no');
-      const timeDelta = Math.min(100, prevTime ? time - prevTime : 0);
-      prevTime = time;
+      if (!canvasRef.current || !context) throw new Error('oh no');
+
+      const timeDelta = Math.min(100, stepState.current.prev ? time - stepState.current.prev : 0);
+      stepState.current.prev = time;
+
+      if (configRef.current.paused && !stepState.current.allowOne) return;
+      stepState.current.allowOne = false;
 
       const { bounds, position } = initCanvas(canvasRef.current, context);
-
       simulationRef.current.step(bounds, position, timeDelta);
 
       for (const item of simulationRef.current.objects) item.draw(context);

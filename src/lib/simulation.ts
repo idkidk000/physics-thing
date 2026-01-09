@@ -17,7 +17,7 @@ export class Simulation {
     this.#configRef = configRef;
     this.#mouseRef = mouseRef;
     const signal = new AbortController().signal;
-    eventEmitter.subscribe('clear', () => this.reset(), signal);
+    eventEmitter.subscribe('reset', () => this.reset(), signal);
     eventEmitter.subscribe('dump', () => console.log(this.#objects), signal);
     // biome-ignore format: no
     eventEmitter.subscribe('grow', () => {
@@ -53,7 +53,8 @@ export class Simulation {
       const { x, y } = this.#activeObject.position;
       this.#activeObject.position.x = canvasMouse.x;
       this.#activeObject.position.y = canvasMouse.y;
-      this.#activeObject.velocity.addEq(this.#activeObject.position.sub({ x, y }).multEq(this.#configRef.current.dragVelocity));
+      const velocity = this.#activeObject.position.sub({ x, y }).divEq(elapsedMillis);
+      this.#activeObject.velocity.addEq(velocity.multEq(this.#configRef.current.dragVelocity));
     } else if (this.#mouseRef.current.buttons) {
       const left = this.#mouseRef.current.buttons & 0x1;
       const right = this.#mouseRef.current.buttons & 0x2;
