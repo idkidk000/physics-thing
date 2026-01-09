@@ -6,16 +6,10 @@ import { useConfig } from '@/hooks/config';
 import { HotKeys } from '@/hooks/event';
 import type { VectorLike } from '@/lib/2d';
 
-enum SidebarState {
-  Closed,
-  Open,
-  Closing,
-}
-
 export function Sidebar() {
   const { config, setConfig } = useConfig();
-  const [state, setState] = useState<SidebarState>(SidebarState.Closed);
-  const timeoutRef = useRef<number | null>(null);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   const handleMaxAgeChange = useCallback((maxAge: number) => setConfig((prev) => ({ ...prev, maxAge })), []);
   const handleDragVelocityChange = useCallback((dragVelocity: number) => setConfig((prev) => ({ ...prev, dragVelocity })), []);
@@ -34,16 +28,11 @@ export function Sidebar() {
   const handleGravityChange = useCallback((gravity: VectorLike) => setConfig((prev) => ({ ...prev, gravity })), []);
   const handleInitialObjectsChange = useCallback((initialObjects: number) => setConfig((prev) => ({ ...prev, initialObjects })), []);
 
-  const toggleOpen = useCallback(() => {
-    setState((prev) => {
-      const next = prev === SidebarState.Closed ? SidebarState.Open : SidebarState.Closing;
-      if (next === SidebarState.Closing) {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => setState((prev) => (prev === SidebarState.Closing ? SidebarState.Closed : prev)), 300);
-      }
-      return next;
-    });
-  }, []);
+  // biome-ignore format: no
+  const toggleOpen = useCallback(() => setOpen((prev) => {
+    ref.current?.scrollTo({ top: 0, behavior: 'instant' });
+    return !prev;
+  }), []);
 
   return (
     <>
@@ -51,7 +40,7 @@ export function Sidebar() {
         type='button'
         onClick={toggleOpen}
         className='fixed top-0 left-0 px-4 py-2 m-2 rounded bg-background border-2 border-border z-20 group'
-        aria-expanded={state === SidebarState.Open}
+        aria-expanded={open}
       >
         <svg
           width='24'
@@ -76,16 +65,13 @@ export function Sidebar() {
           />
         </svg>
       </button>
+      {open && <div className='fixed inset-0' onClick={toggleOpen} onTouchEnd={toggleOpen} />}
       <div
-        className={`fixed inset-0 starting:bg-transparent transition-[background-color] duration-300 ${state === SidebarState.Closed ? 'hidden' : state === SidebarState.Closing ? 'bg-transparent' : 'bg-black/50'}`}
-        onClick={toggleOpen}
-      />
-      <div
-        className='fixed top-0 left-0 bottom-0 w-auto z-10 transition-[translate] transition-discrete border-2 border-border rounded bg-background aria-hidden:-translate-x-full'
+        className='fixed top-0 left-0 bottom-0 w-auto z-10 transition-[translate] transition-discrete border-e-2 border-border rounded-e bg-background aria-hidden:-translate-x-full shadow-2xl aria-hidden:shadow-none shadow-black'
         role='dialog'
-        aria-hidden={state !== SidebarState.Open}
+        aria-hidden={!open}
       >
-        <div className='flex flex-col gap-2 size-full p-4 select-none overflow-y-auto'>
+        <div className='flex flex-col gap-2 size-full p-4 select-none overflow-y-auto' ref={ref}>
           <VectorPicker range={1} digits={3} name='Gravity' value={config.gravity} onValueChange={handleGravityChange} />
           <Range min={0.1} max={0.5} step={0.01} name='Drag velocity' value={config.dragVelocity} onValueChange={handleDragVelocityChange} />
           <Range min={0.9} max={1} step={0.001} name='Collide velocity' value={config.collideVelocityRatio} onValueChange={handleCollideVelocityRatioChange} />
@@ -97,10 +83,12 @@ export function Sidebar() {
           <Range min={1} max={20} name='Physics steps' value={config.physicsSteps} onValueChange={handlePhysicsStepsChange} />
           <Range min={1} max={100} step={1} name='Idle steps' value={config.idleSteps} onValueChange={handleIdleStepsChange} />
           <Range min={0.01} max={1} step={0.01} name='Idle threshold' value={config.idleThreshold} onValueChange={handleIdleThresholdChange} />
+
           <hr />
 
           <Range min={0} max={10000} step={100} name='Max age' value={config.maxAge} onValueChange={handleMaxAgeChange} />
           <Range min={0} max={100} step={1} name='Initial objects' value={config.initialObjects} onValueChange={handleInitialObjectsChange} />
+
           <hr />
 
           <Range min={1} max={config.radiusMax} name='Radius min' value={config.radiusMin} onValueChange={handleRadiusMinChange} />
@@ -111,6 +99,7 @@ export function Sidebar() {
           <Checkbox name='Draw highlight' value={config.drawHighlight} onValueChange={handleDrawHighlightChange} />
 
           <hr />
+
           <div className='grid grid-cols-2 gap-2'>
             <HotKeys className='flex gap-2 items-center' />
           </div>

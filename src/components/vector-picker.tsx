@@ -32,7 +32,6 @@ export function VectorPicker({
     const center: PointLike = { x: rect.width / 2, y: rect.height / 2 };
     const radius = rect.width / 2;
     const position = Point.add(center, Point.mult(Point.div(vec, range), radius));
-    console.debug('updateControl', 'vec', vec, 'center', center, { radius }, 'position', position);
     dragRef.current.style.left = `${position.x}px`;
     dragRef.current.style.top = `${position.y}px`;
     spanRef.current.innerText = `{ x: ${vec.x.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}, y: ${vec.y.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })} }`;
@@ -62,7 +61,6 @@ export function VectorPicker({
       if (hypot2 > radius2) return;
       const relative = Point.sub(position, center);
       const value = Point.mult(Point.div(relative, radius), range);
-      console.debug('handleTouchMove', 'relative', relative, { radius }, 'value', value);
       deferredValueRef.current = value;
       timeoutRef.current ??= setTimeout(sendDeferredValue, updateMillis);
       updateControl(value);

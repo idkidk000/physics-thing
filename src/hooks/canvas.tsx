@@ -13,7 +13,7 @@ export interface MouseState {
 }
 
 interface Context {
-  canvasRef: RefObject<HTMLCanvasElement>;
+  canvasRef: RefObject<HTMLCanvasElement | null>;
   mouseRef: RefObject<MouseState>;
 }
 
@@ -22,7 +22,7 @@ const Context = createContext<Context | null>(null);
 export function CanvasProvider({ children }: { children: ReactNode }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mouseRef = useRef<MouseState>({ x: 0, y: 0, event: MouseStateEvent.None, buttons: 0 });
-  const value: Context = useMemo(() => ({ canvasRef: canvasRef as RefObject<HTMLCanvasElement>, mouseRef }), []);
+  const value: Context = useMemo(() => ({ canvasRef, mouseRef }), []);
   return <Context value={value}>{children}</Context>;
 }
 

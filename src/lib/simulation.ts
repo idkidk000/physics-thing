@@ -13,17 +13,29 @@ export class Simulation {
   #deleteIxs = new Set<number>();
   #mouseRef: RefObject<MouseState>;
   #steps = 0;
-  constructor(eventEmitter: EventEmitter<EventId>, configRef: RefObject<Config>, mouseRef: RefObject<MouseState>) {
+  #canvasRef: RefObject<HTMLCanvasElement | null>;
+  #context: CanvasRenderingContext2D | null = null;
+  #controller = new AbortController();
+  constructor(
+    eventEmitter: EventEmitter<EventId>,
+    configRef: RefObject<Config>,
+    mouseRef: RefObject<MouseState>,
+    canvasRef: RefObject<HTMLCanvasElement | null>
+  ) {
     this.#configRef = configRef;
     this.#mouseRef = mouseRef;
-    const signal = new AbortController().signal;
-    eventEmitter.subscribe('reset', () => this.reset(), signal);
-    eventEmitter.subscribe('dump', () => console.log(this.#objects), signal);
+    this.#canvasRef = canvasRef;
+    eventEmitter.subscribe('reset', () => this.reset(), this.#controller.signal);
+    // biome-ignore format: no
+    eventEmitter.subscribe('dump', () => {
+      console.log(this.#objects);
+      (window as typeof window & { objects: Circle[] }).objects = this.#objects;
+    }, this.#controller.signal);
     // biome-ignore format: no
     eventEmitter.subscribe('grow', () => {
       if (this.#activeObject) ++this.#activeObject.radius;
       else for (const item of this.#objects) ++item.radius;
-    }, signal);
+    }, this.#controller.signal);
     // biome-ignore format: no
     eventEmitter.subscribe('immortal', () => {
       if (this.#activeObject) this.#activeObject.immortal = !this.#activeObject.immortal;
@@ -31,9 +43,26 @@ export class Simulation {
         const immortal = this.#objects.at(0)?.immortal;
         for (const item of this.#objects) item.immortal = !immortal;
       }
-    }, signal);
+    }, this.#controller.signal);
   }
-  step(bounds: PointLike, position: PointLike, elapsedMillis: number) {
+  destructor() {
+    this.#controller.abort();
+    (window as typeof window & { objects: null }).objects = null;
+  }
+  step(elapsedMillis: number) {
+    if (!this.#canvasRef.current) throw new Error('canvasRef is null');
+    const rect = this.#canvasRef.current.getBoundingClientRect();
+    const bounds = Point.round({ x: rect.width, y: rect.height });
+    this.#canvasRef.current.width = bounds.x;
+    this.#canvasRef.current.height = bounds.y;
+    if (this.#context === null) {
+      const context = this.#canvasRef.current.getContext('2d');
+      if (!context) throw new Error('could not get 2d context');
+      this.#context = context;
+    }
+    this.#context.clearRect(0, 0, bounds.x, bounds.y);
+    const position = Point.round({ x: rect.left, y: rect.top });
+
     const canvasMouse = Point.sub(this.#mouseRef.current, position);
 
     if (this.#mouseRef.current.event === MouseStateEvent.End) {
@@ -103,6 +132,10 @@ export class Simulation {
     }
 
     ++this.#steps;
+  }
+  draw() {
+    if (!this.#context) throw new Error('could not get 2d context');
+    for (const item of this.#objects) item.draw(this.#context);
   }
   get objects() {
     return this.#objects;

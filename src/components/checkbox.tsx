@@ -39,8 +39,8 @@ export function Checkbox({ value, onValueChange, name }: { value: boolean; onVal
             viewBox='0 0 24 24'
             fill='none'
             stroke='currentColor'
-            stroke-width='2'
-            stroke-linecap='round'
+            strokeWidth='2'
+            strokeLinecap='round'
             aria-description='checked'
             role='graphics-symbol'
             className={`starting:-translate-y-1/2 starting:scale-200 transition-[translate,scale] ${state === CheckboxState.Unchecking ? 'translate-y-2/3 scale-200' : ''}`}

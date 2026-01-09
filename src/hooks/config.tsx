@@ -29,9 +29,9 @@ export const defaultConfig: Config = {
   maxAge: 0,
   physicsSteps: 5,
   radiusMin: 20,
-  radiusMax: 50,
+  radiusMax: 70,
   paused: false,
-  gravity: { x: 0, y: 0.2 },
+  gravity: { x: 0, y: 0.05 },
   collideVelocityRatio: 0.99,
   stepVelocityRatio: 0.997,
   idleSteps: 10,
@@ -39,7 +39,7 @@ export const defaultConfig: Config = {
   restitutionCoefficient: 0.995,
   drawShadow: false,
   drawHighlight: true,
-  initialObjects: 30,
+  initialObjects: 20,
 };
 
 interface Context {
