@@ -6,7 +6,7 @@ export function VectorPicker({
   onValueChange,
   range,
   name,
-  digits = 3,
+  digits = 2,
   updateMillis = 300,
 }: {
   value: VectorLike;
@@ -60,12 +60,12 @@ export function VectorPicker({
       const hypot2 = Point.hypot2(center, position);
       if (hypot2 > radius2) return;
       const relative = Point.sub(position, center);
-      const value = Point.mult(Point.div(relative, radius), range);
+      const value = Point.roundTo(Point.mult(Point.div(relative, radius), range),digits);
       deferredValueRef.current = value;
       timeoutRef.current ??= setTimeout(sendDeferredValue, updateMillis);
       updateControl(value);
     });
-  }, [range, sendDeferredValue, updateControl, updateMillis]);
+  }, [range, sendDeferredValue, updateControl, updateMillis, digits]);
 
   // biome-ignore format: no
   const handleMouseMove = useCallback((event: MouseEvent<HTMLDivElement>) => {
@@ -74,6 +74,8 @@ export function VectorPicker({
   }, [updateLocalValue]);
 
   const handleTouchMove = useCallback((event: TouchEvent<HTMLDivElement>) => updateLocalValue(event.touches[0]), [updateLocalValue]);
+
+  const handleMouseClick = useCallback((event: MouseEvent<HTMLDivElement>) => updateLocalValue(event), [updateLocalValue]);
 
   // biome-ignore format: no
   const spanStyle: CSSProperties = useMemo(() => ({
@@ -93,6 +95,7 @@ export function VectorPicker({
         onMouseUp={sendDeferredValue}
         onTouchEnd={sendDeferredValue}
         onTouchMove={handleTouchMove}
+        onClick={handleMouseClick}
       >
         <div ref={dragRef} className='size-5.5 rounded-md bg-accent border-3 border-background shadow absolute -translate-1/2'></div>
       </div>

@@ -101,18 +101,24 @@ export class Circle {
     other.velocity.addEq(impulseVector.div(other.mass)).multEq(this.#configRef.current.collideVelocityRatio);
   }
   draw(context: CanvasRenderingContext2D): void {
+    const config = this.#configRef.current;
     context.beginPath();
     context.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
     context.closePath();
     context.fillStyle = `hsl(${this.hue} 100 50 / ${this.opacity}%)`;
+    if (config.drawBlur) {
+      context.shadowBlur = 25;
+      context.shadowColor = `hsl(${this.hue} 100 50 / ${this.opacity}%)`;
+    }
     context.fill();
+    if (config.drawBlur) context.shadowBlur = 0;
 
-    if (this.#configRef.current.drawHighlight || this.#configRef.current.drawShadow) {
+    if (config.drawHighlight || config.drawShadow) {
       context.save();
       context.clip();
     }
 
-    if (this.#configRef.current.drawHighlight) {
+    if (config.drawHighlight) {
       context.beginPath();
       context.arc(this.position.x, this.position.y, this.radius, Math.PI * 0.75, Math.PI * 1.75);
       context.arc(this.position.x + this.radius * 0.8, this.position.y + this.radius * 0.8, this.radius * 1.5, Math.PI * 1.75, Math.PI * 0.75, true);
@@ -121,7 +127,7 @@ export class Circle {
       context.fill();
     }
 
-    if (this.#configRef.current.drawShadow) {
+    if (config.drawShadow) {
       context.beginPath();
       context.arc(this.position.x, this.position.y, this.radius, Math.PI * -0.25, Math.PI * 0.75);
       context.arc(this.position.x - this.radius * 0.8, this.position.y - this.radius * 0.8, this.radius * 1.5, Math.PI * 0.75, Math.PI * -0.25, true);
@@ -130,6 +136,6 @@ export class Circle {
       context.fill();
     }
 
-    if (this.#configRef.current.drawHighlight || this.#configRef.current.drawShadow) context.restore();
+    if (config.drawHighlight || config.drawShadow) context.restore();
   }
 }

@@ -19,12 +19,13 @@ export interface Config {
   restitutionCoefficient: number;
   drawShadow: boolean;
   drawHighlight: boolean;
+  drawBlur: boolean;
   initialObjects: number;
 }
 
 export const defaultConfig: Config = {
   dragVelocity: 0.25,
-  hueCenter: 275,
+  hueCenter: 265,
   hueRange: 50,
   maxAge: 0,
   physicsSteps: 5,
@@ -39,6 +40,7 @@ export const defaultConfig: Config = {
   restitutionCoefficient: 0.995,
   drawShadow: false,
   drawHighlight: true,
+  drawBlur: false,
   initialObjects: 20,
 };
 

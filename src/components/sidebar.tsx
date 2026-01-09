@@ -1,10 +1,23 @@
-import { useCallback, useRef, useState } from 'react';
+import { type CSSProperties, useCallback, useMemo, useRef, useState } from 'react';
 import { Checkbox } from '@/components/checkbox';
 import { Range } from '@/components/range';
 import { VectorPicker } from '@/components/vector-picker';
 import { useConfig } from '@/hooks/config';
 import { HotKeys } from '@/hooks/event';
 import type { VectorLike } from '@/lib/2d';
+
+function HueCenterRange() {
+  const { config, setConfig } = useConfig();
+
+  const handleChange = useCallback((hueCenter: number) => setConfig((prev) => ({ ...prev, hueCenter })), []);
+
+  // biome-ignore format: no
+  const style = useMemo(() => ({
+    '--color-accent': `light-dark(hsl(${config.hueCenter} 85% 40%), hsl(${config.hueCenter} 100% 55%))`,
+  }), [config.hueCenter]) as CSSProperties
+
+  return <Range min={0} max={359} name='Hue center' value={config.hueCenter} onValueChange={handleChange} style={style} />;
+}
 
 export function Sidebar() {
   const { config, setConfig } = useConfig();
@@ -13,7 +26,6 @@ export function Sidebar() {
 
   const handleMaxAgeChange = useCallback((maxAge: number) => setConfig((prev) => ({ ...prev, maxAge })), []);
   const handleDragVelocityChange = useCallback((dragVelocity: number) => setConfig((prev) => ({ ...prev, dragVelocity })), []);
-  const handleHueCenterChange = useCallback((hueCenter: number) => setConfig((prev) => ({ ...prev, hueCenter })), []);
   const handleHueRangeChange = useCallback((hueRange: number) => setConfig((prev) => ({ ...prev, hueRange })), []);
   const handlePhysicsStepsChange = useCallback((physicsSteps: number) => setConfig((prev) => ({ ...prev, physicsSteps })), []);
   const handleRadiusMinChange = useCallback((radiusMin: number) => setConfig((prev) => ({ ...prev, radiusMin })), []);
@@ -25,6 +37,7 @@ export function Sidebar() {
   const handleIdleThresholdChange = useCallback((idleThreshold: number) => setConfig((prev) => ({ ...prev, idleThreshold })), []);
   const handleDrawShadowChange = useCallback((drawShadow: boolean) => setConfig((prev) => ({ ...prev, drawShadow })), []);
   const handleDrawHighlightChange = useCallback((drawHighlight: boolean) => setConfig((prev) => ({ ...prev, drawHighlight })), []);
+  const handleDrawBlurChange = useCallback((drawBlur: boolean) => setConfig((prev) => ({ ...prev, drawBlur })), []);
   const handleGravityChange = useCallback((gravity: VectorLike) => setConfig((prev) => ({ ...prev, gravity })), []);
   const handleInitialObjectsChange = useCallback((initialObjects: number) => setConfig((prev) => ({ ...prev, initialObjects })), []);
 
@@ -56,12 +69,12 @@ export function Sidebar() {
         >
           <path
             d='M4 12h16'
-            className='origin-center transition-transform -translate-y-[7px] group-aria-expanded:rotate-38 group-aria-expanded:scale-x-130 group-aria-expanded:translate-y-0'
+            className='origin-center transition-transform -translate-y-[7px] group-aria-expanded:rotate-38 group-aria-expanded:scale-x-130 group-aria-expanded:translate-y-0 duration-300'
           />
-          <path d='M4 12h16' className='origin-center transition-opacity  group-aria-expanded:opacity-0' />
+          <path d='M4 12h16' className='origin-center transition-[opacity,scale] group-aria-expanded:opacity-0 group-aria-expanded:scale-x-0' />
           <path
             d='M4 12h16'
-            className='origin-center transition-transform translate-y-[7px] group-aria-expanded:-rotate-38 group-aria-expanded:scale-x-130 group-aria-expanded:translate-y-0'
+            className='origin-center transition-transform translate-y-[7px] group-aria-expanded:rotate-142 group-aria-expanded:scale-x-130 group-aria-expanded:translate-y-0 duration-300'
           />
         </svg>
       </button>
@@ -72,7 +85,7 @@ export function Sidebar() {
         aria-hidden={!open}
       >
         <div className='flex flex-col gap-2 size-full p-4 select-none overflow-y-auto' ref={ref}>
-          <VectorPicker range={1} digits={3} name='Gravity' value={config.gravity} onValueChange={handleGravityChange} />
+          <VectorPicker range={1} digits={2} name='Gravity' value={config.gravity} onValueChange={handleGravityChange} />
           <Range min={0.1} max={0.5} step={0.01} name='Drag velocity' value={config.dragVelocity} onValueChange={handleDragVelocityChange} />
           <Range min={0.9} max={1} step={0.001} name='Collide velocity' value={config.collideVelocityRatio} onValueChange={handleCollideVelocityRatioChange} />
           <Range min={0.9} max={1} step={0.001} name='Step velocity' value={config.stepVelocityRatio} onValueChange={handleStepVelocityRatioChange} />
@@ -93,10 +106,11 @@ export function Sidebar() {
 
           <Range min={1} max={config.radiusMax} name='Radius min' value={config.radiusMin} onValueChange={handleRadiusMinChange} />
           <Range min={config.radiusMin} max={200} name='Radius max' value={config.radiusMax} onValueChange={handleRadiusMaxChange} />
-          <Range min={0} max={359} name='Hue center' value={config.hueCenter} onValueChange={handleHueCenterChange} />
+          <HueCenterRange />
           <Range min={0} max={180} name='Hue range' value={config.hueRange} onValueChange={handleHueRangeChange} />
-          <Checkbox name='Draw shadow' value={config.drawShadow} onValueChange={handleDrawShadowChange} />
           <Checkbox name='Draw highlight' value={config.drawHighlight} onValueChange={handleDrawHighlightChange} />
+          <Checkbox name='Draw shadow' value={config.drawShadow} onValueChange={handleDrawShadowChange} />
+          <Checkbox name='Draw blur' value={config.drawBlur} onValueChange={handleDrawBlurChange} />
 
           <hr />
 

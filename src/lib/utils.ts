@@ -8,4 +8,8 @@ export abstract class Utils {
     const intermediate = value % mod;
     return intermediate + ((mod > 0 && intermediate < 0) || (mod < 0 && intermediate > 0) ? mod : 0);
   }
+  static roundTo(value: number, digits: number): number {
+    const multiplier = 10 ** digits;
+    return Math.round(value * multiplier) / multiplier;
+  }
 }

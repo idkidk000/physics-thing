@@ -51,6 +51,9 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   clamp(min: Interface, max: Interface): this {
     return new this.#typedConstructor(PointOrVector.clamp(this, min, max));
   }
+  roundTo(digits: number): this {
+    return new this.#typedConstructor(PointOrVector.roundTo(this, digits));
+  }
 
   addEq(other: Interface): this {
     const { x, y } = PointOrVector.add(this, other);
@@ -97,6 +100,11 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
     [this.x, this.y] = [x, y];
     return this;
   }
+  roundToEq(digits: number): this {
+    const { x, y } = PointOrVector.roundTo(this, digits);
+    [this.x, this.y] = [x, y];
+    return this;
+  }
 
   hypot2(other?: Interface): number {
     return other ? PointOrVector.hypot2(this, other) : PointOrVector.hypot2(this);
@@ -134,6 +142,10 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   }
   static clamp(item: PointOrVectorLike, min: PointOrVectorLike, max: PointOrVectorLike): PointOrVectorLike {
     return { x: Math.min(Math.max(min.x, item.x), max.x), y: Math.min(Math.max(min.y, item.y), max.y) };
+  }
+  static roundTo(item: PointOrVectorLike, digits: number): PointOrVectorLike {
+    const multiplier = 10 ** digits;
+    return { x: Math.round(item.x * multiplier) / multiplier, y: Math.round(item.y * multiplier) / multiplier };
   }
 
   static hypot2(...params: [item: PointOrVectorLike] | [item: PointOrVectorLike, other: PointOrVectorLike]): number {

@@ -1,4 +1,4 @@
-import { type ChangeEvent, useCallback, useId } from 'react';
+import { type ChangeEvent, type CSSProperties, useCallback, useId } from 'react';
 
 export function Range({
   min,
@@ -8,6 +8,7 @@ export function Range({
   onValueChange,
   name,
   unit = '',
+  style,
 }: {
   min: number;
   max: number;
@@ -16,6 +17,7 @@ export function Range({
   onValueChange: (value: number) => void;
   name: string;
   unit?: string;
+  style?: CSSProperties;
 }) {
   const id = useId();
 
@@ -28,7 +30,7 @@ export function Range({
       <label htmlFor={id} className='grow basis-16'>
         {name}
       </label>
-      <input id={id} type='range' min={min} max={max} step={step} value={value} onChange={handleChange} />
+      <input id={id} type='range' min={min} max={max} step={step} value={value} onChange={handleChange} style={style} />
       <span className='grow basis-0'>{`${value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${unit}`}</span>
     </div>
   );
