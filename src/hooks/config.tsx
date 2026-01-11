@@ -2,6 +2,12 @@ import { createContext, type Dispatch, type ReactNode, type RefObject, type SetS
 import { useEvent } from '@/hooks/event';
 import type { VectorLike } from '@/lib/2d';
 
+export enum Shading {
+  Flat,
+  TwoTone,
+  Gradient,
+}
+
 export interface Config {
   dragVelocity: number;
   hueCenter: number;
@@ -14,13 +20,11 @@ export interface Config {
   gravity: VectorLike;
   collideVelocityRatio: number;
   stepVelocityRatio: number;
-  idleSteps: number;
-  idleThreshold: number;
   restitutionCoefficient: number;
-  drawShadow: boolean;
-  drawHighlight: boolean;
   drawBlur: boolean;
+  shading: Shading;
   initialObjects: number;
+  clickSpawn: boolean;
 }
 
 export const defaultConfig: Config = {
@@ -32,16 +36,14 @@ export const defaultConfig: Config = {
   radiusMin: 20,
   radiusMax: 70,
   paused: false,
-  gravity: { x: 0, y: 0.05 },
+  gravity: { x: 0, y: 0.5 },
   collideVelocityRatio: 0.99,
   stepVelocityRatio: 0.997,
-  idleSteps: 10,
-  idleThreshold: 0.1,
   restitutionCoefficient: 0.995,
-  drawShadow: false,
-  drawHighlight: true,
   drawBlur: false,
+  shading: Shading.TwoTone,
   initialObjects: 20,
+  clickSpawn: false,
 };
 
 interface Context {
@@ -52,8 +54,19 @@ interface Context {
 
 const Context = createContext<Context | null>(null);
 
+function readLocalStorage(): Config | null {
+  const value = localStorage.getItem('physicsThing.config');
+  if (value === null) return value;
+  return JSON.parse(value) as Config;
+}
+
+function writeLocalStorage(config: Config): void {
+  localStorage.setItem('physicsThing.config', JSON.stringify(config));
+  document.documentElement.style.setProperty('--hue-center', `${config.hueCenter}`);
+}
+
 export function ConfigProvider({ children }: { children: ReactNode }) {
-  const [config, setConfig] = useState<Config>(defaultConfig);
+  const [config, setConfig] = useState<Config>({ ...defaultConfig, ...readLocalStorage() });
   const configRef = useRef<Config>(config);
   const { eventRef } = useEvent();
 
@@ -66,6 +79,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     configRef.current = config;
+    writeLocalStorage(config);
   }, [config]);
 
   // biome-ignore format: no

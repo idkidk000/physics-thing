@@ -1,4 +1,4 @@
-import { type ChangeEvent, type CSSProperties, useCallback, useId } from 'react';
+import { type ChangeEvent, useCallback, useId } from 'react';
 
 export function Range({
   min,
@@ -6,18 +6,16 @@ export function Range({
   step = 1,
   value,
   onValueChange,
-  name,
+  label,
   unit = '',
-  style,
 }: {
   min: number;
   max: number;
   step?: number;
   value: number;
   onValueChange: (value: number) => void;
-  name: string;
+  label: string;
   unit?: string;
-  style?: CSSProperties;
 }) {
   const id = useId();
 
@@ -28,9 +26,9 @@ export function Range({
   return (
     <div className='flex flex-row gap-2 items-center flex-wrap justify-center'>
       <label htmlFor={id} className='grow basis-16'>
-        {name}
+        {label}
       </label>
-      <input id={id} type='range' min={min} max={max} step={step} value={value} onChange={handleChange} style={style} />
+      <input id={id} type='range' min={min} max={max} step={step} value={value} onChange={handleChange} />
       <span className='grow basis-0'>{`${value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${unit}`}</span>
     </div>
   );

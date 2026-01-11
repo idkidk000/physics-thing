@@ -1,3 +1,4 @@
+import { Button } from '@/components/button';
 import { createContext, type ReactNode, type RefObject, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 
 type Callback = () => unknown;
@@ -27,7 +28,6 @@ export const events = [
   { id: 'dump', keyName: 'd', label: 'Dump to console' },
   { id: 'fullscreen', keyName: 'f', label: 'Toggle fullscreen' },
   { id: 'grow', keyName: 'g', label: 'Grow' },
-  { id: 'immortal', keyName: 'i', label: 'Toggle immortal' },
   { id: 'pause', keyName: 'p', label: 'Toggle paused' },
   { id: 'reload', keyName: 'l', label: 'Reload renderer' },
   { id: 'defaults', keyName: 'c', label: 'Reset config' },
@@ -81,7 +81,7 @@ function HotKey({
   className,
   clickClass = 'bg-button-active',
   clickMillis = 200,
-}: Event & { className: string; clickClass?: string; clickMillis?: number }) {
+}: Event & { className?: string; clickClass?: string; clickMillis?: number }) {
   const { eventRef } = useEvent();
   const ref = useRef<HTMLButtonElement>(null);
   const timeoutRef = useRef<number>(null);
@@ -103,14 +103,14 @@ function HotKey({
   }, [id, clickClass, clickMillis]);
 
   return (
-    <button type='button' className={className} key={id} onClick={handleClick} ref={ref}>
+    <Button type='button' className={className} key={id} onClick={handleClick} ref={ref}>
       <kbd>{key}</kbd>
       <span>{label}</span>
-    </button>
+    </Button>
   );
 }
 
-export function HotKeys({ className }: { className: string }) {
+export function HotKeys({ className }: { className?: string }) {
   return (
     <>
       {events.map((props) => (

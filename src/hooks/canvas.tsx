@@ -45,9 +45,11 @@ export function Canvas() {
     mouseRef.current.event = MouseStateEvent.Start;
   }, []);
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((event: MouseEvent<HTMLCanvasElement>) => {
     mouseRef.current.buttons = 0x0;
     mouseRef.current.event = MouseStateEvent.End;
+    mouseRef.current.x = event.clientX;
+    mouseRef.current.y = event.clientY;
   }, []);
 
   const handleMouseRightClick = useCallback((event: MouseEvent<HTMLCanvasElement>) => {

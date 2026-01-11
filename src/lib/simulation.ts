@@ -6,6 +6,8 @@ import { Point, type PointLike, Vector } from '@/lib/2d';
 import { Circle } from '@/lib/circle';
 import { Utils } from '@/lib/utils';
 
+const LIGHT_POSITION: PointLike = { x: 0.5, y: -0.1 };
+
 export class Simulation {
   #objects: Circle[] = [];
   #activeObject: Circle | null = null;
@@ -36,14 +38,6 @@ export class Simulation {
       if (this.#activeObject) ++this.#activeObject.radius;
       else for (const item of this.#objects) ++item.radius;
     }, this.#controller.signal);
-    // biome-ignore format: no
-    eventEmitter.subscribe('immortal', () => {
-      if (this.#activeObject) this.#activeObject.immortal = !this.#activeObject.immortal;
-      else {
-        const immortal = this.#objects.at(0)?.immortal;
-        for (const item of this.#objects) item.immortal = !immortal;
-      }
-    }, this.#controller.signal);
   }
   destructor() {
     this.#controller.abort();
@@ -67,6 +61,8 @@ export class Simulation {
 
     if (this.#mouseRef.current.event === MouseStateEvent.End) {
       if (this.#activeObject) {
+        if (canvasMouse.x <= 1 || canvasMouse.y <= 1 || canvasMouse.x >= bounds.x - 1 || canvasMouse.y >= bounds.y - 1)
+          this.#objects = this.#objects.filter((item) => item !== this.#activeObject);
         this.#activeObject.dragging = false;
         this.#activeObject = null;
       }
@@ -84,7 +80,7 @@ export class Simulation {
       this.#activeObject.position.y = canvasMouse.y;
       const velocity = this.#activeObject.position.sub({ x, y }).divEq(elapsedMillis);
       this.#activeObject.velocity.addEq(velocity.multEq(this.#configRef.current.dragVelocity));
-    } else if (this.#mouseRef.current.buttons) {
+    } else if (this.#configRef.current.clickSpawn && this.#mouseRef.current.buttons) {
       const left = this.#mouseRef.current.buttons & 0x1;
       const right = this.#mouseRef.current.buttons & 0x2;
       const direction = left && right ? undefined : left > 0;
@@ -120,8 +116,7 @@ export class Simulation {
 
     for (const [i, item] of this.#objects.entries()) {
       if (!item.dragging) ++item.age;
-      if (!(item.immortal || item.dragging || this.#configRef.current.maxAge === 0) && (item.idle || item.age >= this.#configRef.current.maxAge))
-        --item.opacity;
+      if (!(item.dragging || this.#configRef.current.maxAge === 0) && item.age >= this.#configRef.current.maxAge) --item.opacity;
       else if (item.opacity < 100) ++item.opacity;
       if (item.opacity === 0) this.#deleteIxs.add(i);
     }
@@ -135,7 +130,18 @@ export class Simulation {
   }
   draw() {
     if (!this.#context) throw new Error('could not get 2d context');
-    for (const item of this.#objects) item.draw(this.#context);
+    if (!this.#canvasRef.current) throw new Error('canvasRef is null');
+    const canvas: PointLike = { x: this.#canvasRef.current.width, y: this.#canvasRef.current.height };
+    const light = Point.mult(canvas, LIGHT_POSITION);
+    const maxLightDistance = Math.sqrt(
+      Math.max(
+        Point.hypot2(Point.sub(light, { x: 0, y: 0 })),
+        Point.hypot2(Point.sub(light, { x: canvas.x, y: 0 })),
+        Point.hypot2(Point.sub(light, { x: 0, y: canvas.y })),
+        Point.hypot2(Point.sub(light, { x: canvas.x, y: canvas.y }))
+      )
+    );
+    for (const item of this.#objects) item.draw(this.#context, light, maxLightDistance);
   }
   get objects() {
     return this.#objects;

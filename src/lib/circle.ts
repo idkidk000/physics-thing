@@ -1,14 +1,12 @@
 import type { RefObject } from 'react';
-import type { Config } from '@/hooks/config';
-import { type Point, type PointLike, Vector } from '@/lib/2d';
+import { type Config, Shading } from '@/hooks/config';
+import { Point, type PointLike, Vector } from '@/lib/2d';
+import { Utils } from '@/lib/utils';
 
 export class Circle {
-  #idleCount = 0;
   #radius = 0;
   #mass = 0;
-  #moved = false;
   #dragging = false;
-  immortal = false;
   age = 0;
   #configRef: RefObject<Config>;
   constructor(
@@ -21,9 +19,6 @@ export class Circle {
   ) {
     this.#configRef = configRef;
     this.radius = radius;
-  }
-  get idle() {
-    return this.#idleCount >= this.#configRef.current.idleSteps;
   }
   get radius() {
     return this.#radius;
@@ -56,14 +51,9 @@ export class Circle {
   }
   step(millis: number, bounds: PointLike): void {
     const config = this.#configRef.current;
-    const idleThreshold2 = config.idleThreshold ** 2;
     if (!this.#dragging) {
-      this.velocity.addEq(Vector.mult(config.gravity, 0.03));
-      if (this.#moved) this.#idleCount = 0;
-      else ++this.#idleCount;
-      const offset = this.velocity.mult(millis);
-      this.#moved = offset.hypot2() >= idleThreshold2;
-      this.position.addEq(offset);
+      this.velocity.addEq(Vector.mult(config.gravity, 0.003));
+      this.position.addEq(this.velocity.mult(millis));
     }
     if (this.left < 0) {
       this.position.x = this.radius;
@@ -100,42 +90,51 @@ export class Circle {
     this.velocity.subEq(impulseVector.div(this.mass)).multEq(this.#configRef.current.collideVelocityRatio);
     other.velocity.addEq(impulseVector.div(other.mass)).multEq(this.#configRef.current.collideVelocityRatio);
   }
-  draw(context: CanvasRenderingContext2D): void {
+  draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void {
     const config = this.#configRef.current;
     context.beginPath();
     context.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
     context.closePath();
-    context.fillStyle = `hsl(${this.hue} 100 50 / ${this.opacity}%)`;
     if (config.drawBlur) {
       context.shadowBlur = 25;
       context.shadowColor = `hsl(${this.hue} 100 50 / ${this.opacity}%)`;
     }
-    context.fill();
-    if (config.drawBlur) context.shadowBlur = 0;
 
-    if (config.drawHighlight || config.drawShadow) {
-      context.save();
-      context.clip();
-    }
+    if (config.shading === Shading.TwoTone || config.shading === Shading.Gradient) {
+      const lightOffset = Point.sub(this.position, light);
+      const lightDistance = Point.hypot(lightOffset);
+      const lightUnit = Point.div(lightOffset, lightDistance);
+      const lightDistanceRatio = lightDistance / maxLightDistance;
 
-    if (config.drawHighlight) {
-      context.beginPath();
-      context.arc(this.position.x, this.position.y, this.radius, Math.PI * 0.75, Math.PI * 1.75);
-      context.arc(this.position.x + this.radius * 0.8, this.position.y + this.radius * 0.8, this.radius * 1.5, Math.PI * 1.75, Math.PI * 0.75, true);
-      context.closePath();
-      context.fillStyle = `hsl(${this.hue} 100 80 / ${this.opacity}%)`;
+      if (config.shading === Shading.Gradient) {
+        const lightRatio = Utils.lerp(0.3, 0.1, 1, lightDistanceRatio);
+        const shadowRatio = Utils.lerp(0.6, 0.9, 1, lightDistanceRatio);
+
+        const gradientCenter = Point.sub(this.position, Point.mult(lightUnit, this.radius * (0.9 - lightRatio)));
+        const gradient = context.createRadialGradient(gradientCenter.x, gradientCenter.y, 0, this.position.x, this.position.y, this.radius);
+        gradient.addColorStop(lightRatio, `hsl(${this.hue} 100 ${Utils.lerp(80, 60, 1, lightDistanceRatio)} / ${this.opacity}%)`);
+        gradient.addColorStop(shadowRatio, `hsl(${this.hue} 100 ${Utils.lerp(40, 25, 1, lightDistanceRatio)} / ${this.opacity}%)`);
+        context.fillStyle = gradient;
+        context.fill();
+      }
+
+      if (config.shading === Shading.TwoTone) {
+        const shadowRatio = Utils.lerp(0.3, 0.9, 1, lightDistanceRatio);
+        context.fillStyle = `hsl(${this.hue} 100 ${Utils.lerp(50, 25, 1, lightDistanceRatio)} / ${this.opacity}%)`;
+        context.fill();
+
+        const highlightCenter = Point.sub(this.position, Point.mult(lightUnit, this.radius * (1 - shadowRatio)));
+        context.beginPath();
+        context.arc(highlightCenter.x, highlightCenter.y, this.radius * shadowRatio, 0, Math.PI * 2);
+        context.closePath();
+        context.fillStyle = `hsl(${this.hue} 100 ${Utils.lerp(80, 50, 1, 1 - (1 - lightDistanceRatio) ** 2)} / ${this.opacity}%)`;
+        context.fill();
+      }
+    } else {
+      context.fillStyle = `hsl(${this.hue} 100 50 / ${this.opacity}%)`;
       context.fill();
     }
 
-    if (config.drawShadow) {
-      context.beginPath();
-      context.arc(this.position.x, this.position.y, this.radius, Math.PI * -0.25, Math.PI * 0.75);
-      context.arc(this.position.x - this.radius * 0.8, this.position.y - this.radius * 0.8, this.radius * 1.5, Math.PI * 0.75, Math.PI * -0.25, true);
-      context.closePath();
-      context.fillStyle = `hsl(${this.hue} 100 30 / ${this.opacity}%)`;
-      context.fill();
-    }
-
-    if (config.drawHighlight || config.drawShadow) context.restore();
+    if (context.shadowBlur) context.shadowBlur = 0;
   }
 }

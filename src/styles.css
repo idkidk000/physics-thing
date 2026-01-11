@@ -7,7 +7,8 @@
 @theme inline {
   --color-foreground: light-dark(var(--color-gray-950), var(--color-gray-50));
   --color-background: light-dark(var(--color-gray-50), var(--color-gray-950));
-  --color-accent: light-dark(var(--color-violet-800), var(--color-violet-600));
+  /* --hue-center is set by hooks/config on config change. lch gives more consistent perceived brightness but it changes the hue */
+  --color-accent: light-dark(hsl(var(--hue-center) 100 35), hsl(var(--hue-center) 100 45));
   --color-utility: light-dark(var(--color-gray-700), var(--color-gray-300));
 
   --color-border: hsl(from var(--color-utility) h s l / 30%);
@@ -16,92 +17,56 @@
   --color-button-active: hsl(from var(--color-utility) h s l / 25%);
 }
 
+@utility pixel {
+  image-rendering: pixelated;
+}
+
+@utility slider-thumb {
+  @apply appearance-none box-border size-5 rounded-full border-2 border-border bg-white group-hover:scale-110 transition-[scale,foreground] cursor-pointer;
+}
+
+@utility slider-track {
+  @apply appearance-none box-border h-4 rounded-full border-2 border-border bg-accent cursor-pointer m-0;
+}
+
 @layer base {
   body {
     @apply bg-background text-foreground transition-colors duration-200 accent-accent;
   }
+
   div#root {
     @apply h-dvh w-dvw;
   }
-  .pixel {
-    image-rendering: pixelated;
-  }
+
   kbd {
     @apply font-mono bg-button px-2 rounded-md border border-border;
   }
-  button {
-    @apply bg-button px-2 py-1 rounded-md border border-border hover:bg-button-hover active:bg-button-active transition-colors flex gap-2 shadow items-center;
+
+  a {
+    @apply transition-[scale] hover:scale-102;
   }
+
   hr {
     @apply text-border m-2;
   }
-  .vector-picker {
-    /* outer is 1/Math.SQRT_2 === 71%, which already has a border */
-    background:
-      radial-gradient(
-        transparent 10%,
-        var(--color-border) 10%,
-        var(--color-border) 11%,
-        transparent 11%,
-        transparent 20%,
-        var(--color-border) 20%,
-        var(--color-border) 21%,
-        transparent 21%,
-        transparent 30%,
-        var(--color-border) 30%,
-        var(--color-border) 31%,
-        transparent 31%,
-        transparent 40%,
-        var(--color-border) 40%,
-        var(--color-border) 41%,
-        transparent 41%,
-        transparent 50%,
-        var(--color-border) 50%,
-        var(--color-border) 51%,
-        transparent 51%,
-        transparent 60%,
-        var(--color-border) 60%,
-        var(--color-border) 61%,
-        transparent 61%
-      ), linear-gradient(transparent 49%, var(--color-border) 49%, var(--color-border) 51%, transparent 51%),
-      linear-gradient(to right, transparent 49%, var(--color-border) 49%, var(--color-border) 51%, transparent 51%);
-  }
+
   input[type="range"] {
+    /* don't override on browsers other than firefox and chromium. using selectors for multiple browser prefixes in the same rule does not work */
     appearance: unset;
     -moz-appearance: none;
     -webkit-appearance: none;
-    /* selecting multiple browser prefixes at once, i.e. `&::-moz-range-thumb, &::-webkit-slider-thumb` doesn't work */
+    @apply w-45;
     &::-moz-range-thumb {
-      appearance: none;
-      background-color: var(--color-accent);
-      border-color: var(--color-background);
-      border-radius: 0.5em;
-      border-width: 0.25em;
-      height: 1em;
-      width: 1em;
+      @apply slider-thumb;
     }
     &::-moz-range-track {
-      appearance: none;
-      background-color: var(--color-accent);
-      height: 0.25em;
+      @apply slider-track;
     }
     &::-webkit-slider-thumb {
-      appearance: none;
-      /* chromium really resets everything */
-      border-style: solid;
-      box-sizing: content-box;
-      translate: 0 -0.57em;
-      background-color: var(--color-accent);
-      border-color: var(--color-background);
-      border-radius: 0.5em;
-      border-width: 0.25em;
-      height: 1em;
-      width: 1em;
+      @apply slider-thumb -translate-y-1;
     }
     &::-webkit-slider-runnable-track {
-      appearance: none;
-      background-color: var(--color-accent);
-      height: 0.25em;
+      @apply slider-track;
     }
   }
 }

@@ -30,8 +30,8 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   sub(other: Interface): this {
     return new this.#typedConstructor(PointOrVector.sub(this, other));
   }
-  mult(value: number): this {
-    return new this.#typedConstructor(PointOrVector.mult(this, value));
+  mult(...[param]: [value: number] | [other: Interface]): this {
+    return new this.#typedConstructor(PointOrVector.mult(...([this, param] as [PointOrVectorLike, PointOrVectorLike] | [PointOrVectorLike, number])));
   }
   div(value: number): this {
     return new this.#typedConstructor(PointOrVector.div(this, value));
@@ -65,8 +65,8 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
     [this.x, this.y] = [x, y];
     return this;
   }
-  multEq(value: number): this {
-    const { x, y } = PointOrVector.mult(this, value);
+  multEq(...[param]: [value: number] | [other: Interface]): this {
+    const { x, y } = PointOrVector.mult(...([this, param] as [PointOrVectorLike, PointOrVectorLike] | [PointOrVectorLike, number]));
     [this.x, this.y] = [x, y];
     return this;
   }
@@ -122,8 +122,8 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   static sub(item: PointOrVectorLike, other: PointOrVectorLike): PointOrVectorLike {
     return { x: item.x - other.x, y: item.y - other.y };
   }
-  static mult(item: PointOrVectorLike, value: number): PointOrVectorLike {
-    return { x: item.x * value, y: item.y * value };
+  static mult(...[item, param]: [item: PointOrVectorLike, value: number] | [item: PointOrVectorLike, other: PointOrVectorLike]): PointOrVectorLike {
+    return PointOrVector.is(param) ? { x: item.x * param.x, y: item.y * param.y } : { x: item.x * param, y: item.y * param };
   }
   static div(item: PointOrVectorLike, value: number): PointOrVectorLike {
     return { x: item.x / value, y: item.y / value };
@@ -198,6 +198,9 @@ export class Vector extends PointOrVector<VectorLike> {
   toPoint(): Point {
     return new Point(this);
   }
+  toRadians(): number {
+    return Vector.toRadians(this);
+  }
 
   static unit(item: VectorLike): VectorLike {
     const hypot = PointOrVector.hypot(item);
@@ -213,6 +216,9 @@ export class Vector extends PointOrVector<VectorLike> {
   }
   static dot(item: VectorLike, other: VectorLike): number {
     return item.x * other.x + item.y * other.y;
+  }
+  static toRadians(item: VectorLike): number {
+    return Math.atan2(item.y, item.x);
   }
 }
 

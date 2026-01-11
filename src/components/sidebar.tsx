@@ -1,45 +1,39 @@
-import { type CSSProperties, useCallback, useMemo, useRef, useState } from 'react';
-import { Checkbox } from '@/components/checkbox';
+import { useCallback, useRef, useState } from 'react';
+import { Button } from '@/components/button';
+import { Radio2 } from '@/components/radio';
 import { Range } from '@/components/range';
+import { Switch } from '@/components/switch';
 import { VectorPicker } from '@/components/vector-picker';
-import { useConfig } from '@/hooks/config';
+import { Shading, useConfig } from '@/hooks/config';
 import { HotKeys } from '@/hooks/event';
 import type { VectorLike } from '@/lib/2d';
 
-function HueCenterRange() {
-  const { config, setConfig } = useConfig();
-
-  const handleChange = useCallback((hueCenter: number) => setConfig((prev) => ({ ...prev, hueCenter })), []);
-
-  // biome-ignore format: no
-  const style = useMemo(() => ({
-    '--color-accent': `light-dark(hsl(${config.hueCenter} 85% 40%), hsl(${config.hueCenter} 100% 55%))`,
-  }), [config.hueCenter]) as CSSProperties
-
-  return <Range min={0} max={359} name='Hue center' value={config.hueCenter} onValueChange={handleChange} style={style} />;
-}
+const shadingOptions = [
+  { label: 'Flat', value: Shading.Flat },
+  { label: 'Two tone', value: Shading.TwoTone },
+  { label: 'Gradient', value: Shading.Gradient },
+];
 
 export function Sidebar() {
   const { config, setConfig } = useConfig();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const handleMaxAgeChange = useCallback((maxAge: number) => setConfig((prev) => ({ ...prev, maxAge })), []);
-  const handleDragVelocityChange = useCallback((dragVelocity: number) => setConfig((prev) => ({ ...prev, dragVelocity })), []);
-  const handleHueRangeChange = useCallback((hueRange: number) => setConfig((prev) => ({ ...prev, hueRange })), []);
-  const handlePhysicsStepsChange = useCallback((physicsSteps: number) => setConfig((prev) => ({ ...prev, physicsSteps })), []);
-  const handleRadiusMinChange = useCallback((radiusMin: number) => setConfig((prev) => ({ ...prev, radiusMin })), []);
-  const handleRadiusMaxChange = useCallback((radiusMax: number) => setConfig((prev) => ({ ...prev, radiusMax })), []);
+  const handleClickSpawnChange = useCallback((clickSpawn: boolean) => setConfig((prev) => ({ ...prev, clickSpawn })), []);
   const handleCollideVelocityRatioChange = useCallback((collideVelocityRatio: number) => setConfig((prev) => ({ ...prev, collideVelocityRatio })), []);
-  const handleStepVelocityRatioChange = useCallback((stepVelocityRatio: number) => setConfig((prev) => ({ ...prev, stepVelocityRatio })), []);
-  const handleRestitutionCoefficientChange = useCallback((restitutionCoefficient: number) => setConfig((prev) => ({ ...prev, restitutionCoefficient })), []);
-  const handleIdleStepsChange = useCallback((idleSteps: number) => setConfig((prev) => ({ ...prev, idleSteps })), []);
-  const handleIdleThresholdChange = useCallback((idleThreshold: number) => setConfig((prev) => ({ ...prev, idleThreshold })), []);
-  const handleDrawShadowChange = useCallback((drawShadow: boolean) => setConfig((prev) => ({ ...prev, drawShadow })), []);
-  const handleDrawHighlightChange = useCallback((drawHighlight: boolean) => setConfig((prev) => ({ ...prev, drawHighlight })), []);
+  const handleDragVelocityChange = useCallback((dragVelocity: number) => setConfig((prev) => ({ ...prev, dragVelocity })), []);
   const handleDrawBlurChange = useCallback((drawBlur: boolean) => setConfig((prev) => ({ ...prev, drawBlur })), []);
   const handleGravityChange = useCallback((gravity: VectorLike) => setConfig((prev) => ({ ...prev, gravity })), []);
+  const handleHueCenterChange = useCallback((hueCenter: number) => setConfig((prev) => ({ ...prev, hueCenter })), []);
+  const handleHueRangeChange = useCallback((hueRange: number) => setConfig((prev) => ({ ...prev, hueRange })), []);
   const handleInitialObjectsChange = useCallback((initialObjects: number) => setConfig((prev) => ({ ...prev, initialObjects })), []);
+  const handleMaxAgeChange = useCallback((maxAge: number) => setConfig((prev) => ({ ...prev, maxAge })), []);
+  const handlePhysicsStepsChange = useCallback((physicsSteps: number) => setConfig((prev) => ({ ...prev, physicsSteps })), []);
+  const handleRadiusMaxChange = useCallback((radiusMax: number) => setConfig((prev) => ({ ...prev, radiusMax })), []);
+  const handleRadiusMinChange = useCallback((radiusMin: number) => setConfig((prev) => ({ ...prev, radiusMin })), []);
+  const handleRestitutionCoefficientChange = useCallback((restitutionCoefficient: number) => setConfig((prev) => ({ ...prev, restitutionCoefficient })), []);
+  const handleShadingChange = useCallback((shading: Shading) => setConfig((prev) => ({ ...prev, shading })), []);
+  const handleStepVelocityRatioChange = useCallback((stepVelocityRatio: number) => setConfig((prev) => ({ ...prev, stepVelocityRatio })), []);
 
   // biome-ignore format: no
   const toggleOpen = useCallback(() => setOpen((prev) => {
@@ -49,11 +43,12 @@ export function Sidebar() {
 
   return (
     <>
-      <button
+      <Button
         type='button'
         onClick={toggleOpen}
         className='fixed top-0 left-0 px-4 py-2 m-2 rounded bg-background border-2 border-border z-20 group'
         aria-expanded={open}
+        variant='unstyled'
       >
         <svg
           width='24'
@@ -69,15 +64,18 @@ export function Sidebar() {
         >
           <path
             d='M4 12h16'
-            className='origin-center transition-transform -translate-y-[7px] group-aria-expanded:rotate-38 group-aria-expanded:scale-x-130 group-aria-expanded:translate-y-0 duration-300'
+            className='origin-center transition-transform -translate-y-[7px] group-aria-expanded:rotate-218 group-aria-expanded:scale-x-130 group-aria-expanded:translate-y-0 duration-300'
           />
-          <path d='M4 12h16' className='origin-center transition-[opacity,scale] group-aria-expanded:opacity-0 group-aria-expanded:scale-x-0' />
+          <path
+            d='M4 12h16'
+            className='origin-center transition-[opacity,translate] group-aria-expanded:opacity-0 group-aria-expanded:translate-y-[13px] duration-300'
+          />
           <path
             d='M4 12h16'
             className='origin-center transition-transform translate-y-[7px] group-aria-expanded:rotate-142 group-aria-expanded:scale-x-130 group-aria-expanded:translate-y-0 duration-300'
           />
         </svg>
-      </button>
+      </Button>
       {open && <div className='fixed inset-0' onClick={toggleOpen} onTouchEnd={toggleOpen} />}
       <div
         className='fixed top-0 left-0 bottom-0 w-auto z-10 transition-[translate] transition-discrete border-e-2 border-border rounded-e bg-background aria-hidden:-translate-x-full shadow-2xl aria-hidden:shadow-none shadow-black'
@@ -85,38 +83,65 @@ export function Sidebar() {
         aria-hidden={!open}
       >
         <div className='flex flex-col gap-2 size-full p-4 select-none overflow-y-auto' ref={ref}>
-          <VectorPicker range={1} digits={2} name='Gravity' value={config.gravity} onValueChange={handleGravityChange} />
-          <Range min={0.1} max={0.5} step={0.01} name='Drag velocity' value={config.dragVelocity} onValueChange={handleDragVelocityChange} />
-          <Range min={0.9} max={1} step={0.001} name='Collide velocity' value={config.collideVelocityRatio} onValueChange={handleCollideVelocityRatioChange} />
-          <Range min={0.9} max={1} step={0.001} name='Step velocity' value={config.stepVelocityRatio} onValueChange={handleStepVelocityRatioChange} />
-          <Range min={0.9} max={1} step={0.001} name='Restitution' value={config.restitutionCoefficient} onValueChange={handleRestitutionCoefficientChange} />
+          <VectorPicker range={1} digits={2} label='Gravity' value={config.gravity} onValueChange={handleGravityChange} />
+          <Range min={0.1} max={0.5} step={0.01} label='Drag velocity' value={config.dragVelocity} onValueChange={handleDragVelocityChange} />
+          <Range min={0.9} max={1} step={0.001} label='Collide velocity' value={config.collideVelocityRatio} onValueChange={handleCollideVelocityRatioChange} />
+          <Range min={0.9} max={1} step={0.001} label='Step velocity' value={config.stepVelocityRatio} onValueChange={handleStepVelocityRatioChange} />
+          <Range min={0.9} max={1} step={0.001} label='Restitution' value={config.restitutionCoefficient} onValueChange={handleRestitutionCoefficientChange} />
+          <Range min={1} max={20} label='Physics steps' value={config.physicsSteps} onValueChange={handlePhysicsStepsChange} />
 
           <hr />
 
-          <Range min={1} max={20} name='Physics steps' value={config.physicsSteps} onValueChange={handlePhysicsStepsChange} />
-          <Range min={1} max={100} step={1} name='Idle steps' value={config.idleSteps} onValueChange={handleIdleStepsChange} />
-          <Range min={0.01} max={1} step={0.01} name='Idle threshold' value={config.idleThreshold} onValueChange={handleIdleThresholdChange} />
+          <Range min={0} max={10000} step={100} label='Max age' value={config.maxAge} onValueChange={handleMaxAgeChange} />
+          <Range min={0} max={100} step={1} label='Initial objects' value={config.initialObjects} onValueChange={handleInitialObjectsChange} />
 
           <hr />
 
-          <Range min={0} max={10000} step={100} name='Max age' value={config.maxAge} onValueChange={handleMaxAgeChange} />
-          <Range min={0} max={100} step={1} name='Initial objects' value={config.initialObjects} onValueChange={handleInitialObjectsChange} />
+          <Range min={1} max={config.radiusMax} label='Radius min' value={config.radiusMin} onValueChange={handleRadiusMinChange} />
+          <Range min={config.radiusMin} max={200} label='Radius max' value={config.radiusMax} onValueChange={handleRadiusMaxChange} />
+          <Range min={0} max={359} label='Hue center' value={config.hueCenter} onValueChange={handleHueCenterChange} />
+          <Range min={0} max={180} label='Hue range' value={config.hueRange} onValueChange={handleHueRangeChange} />
 
           <hr />
 
-          <Range min={1} max={config.radiusMax} name='Radius min' value={config.radiusMin} onValueChange={handleRadiusMinChange} />
-          <Range min={config.radiusMin} max={200} name='Radius max' value={config.radiusMax} onValueChange={handleRadiusMaxChange} />
-          <HueCenterRange />
-          <Range min={0} max={180} name='Hue range' value={config.hueRange} onValueChange={handleHueRangeChange} />
-          <Checkbox name='Draw highlight' value={config.drawHighlight} onValueChange={handleDrawHighlightChange} />
-          <Checkbox name='Draw shadow' value={config.drawShadow} onValueChange={handleDrawShadowChange} />
-          <Checkbox name='Draw blur' value={config.drawBlur} onValueChange={handleDrawBlurChange} />
+          <div className='flex gap-2 justify-between'>
+            <Switch label='Draw blur' value={config.drawBlur} onValueChange={handleDrawBlurChange} />
+            <Switch label='Click spawn' value={config.clickSpawn} onValueChange={handleClickSpawnChange} />
+          </div>
+
+          <hr />
+
+          {/* <Radio label='Shading' options={shadingOptions} value={config.shading} onValueChange={handleShadingChange} />
+
+          <hr /> */}
+
+          <Radio2 options={shadingOptions} value={config.shading} onValueChange={handleShadingChange} />
 
           <hr />
 
           <div className='grid grid-cols-2 gap-2'>
-            <HotKeys className='flex gap-2 items-center' />
+            <HotKeys />
           </div>
+
+          <hr />
+
+          <a href='https://github.com/idkidk000/physics-thing' className='flex flex-row gap-2 mx-auto'>
+            Source
+            <svg
+              width='24'
+              height='24'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='2'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+              role='graphics-symbol'
+            >
+              <path d='M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4' />
+              <path d='M9 18c-4.51 2-5-2-7-2' />
+            </svg>
+          </a>
         </div>
       </div>
     </>
