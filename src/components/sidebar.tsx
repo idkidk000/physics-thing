@@ -1,38 +1,44 @@
 import { useCallback, useRef, useState } from 'react';
 import { Button } from '@/components/button';
-import { Radio2 } from '@/components/radio';
-import { Range } from '@/components/range';
+import { RadioSlider } from '@/components/radio';
+import { Range, RangeTwo } from '@/components/range';
 import { Switch } from '@/components/switch';
 import { VectorPicker } from '@/components/vector-picker';
-import { Shading, useConfig } from '@/hooks/config';
+import { EntityType, ShadingType, useConfig } from '@/hooks/config';
 import { HotKeys } from '@/hooks/event';
 import type { VectorLike } from '@/lib/2d';
 
 const shadingOptions = [
-  { label: 'Flat', value: Shading.Flat },
-  { label: 'Two tone', value: Shading.TwoTone },
-  { label: 'Gradient', value: Shading.Gradient },
+  { label: 'Flat', value: ShadingType.Flat },
+  { label: 'Two tone', value: ShadingType.TwoTone },
+  { label: 'Gradient', value: ShadingType.Gradient },
+];
+
+const entityOptions = [
+  { label: 'Circle', value: EntityType.Circle },
+  { label: 'Both', value: EntityType.Both },
+  { label: 'Square', value: EntityType.Square },
 ];
 
 export function Sidebar() {
   const { config, setConfig } = useConfig();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
 
   const handleClickSpawnChange = useCallback((clickSpawn: boolean) => setConfig((prev) => ({ ...prev, clickSpawn })), []);
   const handleCollideVelocityRatioChange = useCallback((collideVelocityRatio: number) => setConfig((prev) => ({ ...prev, collideVelocityRatio })), []);
   const handleDragVelocityChange = useCallback((dragVelocity: number) => setConfig((prev) => ({ ...prev, dragVelocity })), []);
   const handleDrawBlurChange = useCallback((drawBlur: boolean) => setConfig((prev) => ({ ...prev, drawBlur })), []);
+  const handleEntityTypeChange = useCallback((entityType: EntityType) => setConfig((prev) => ({ ...prev, entityType })), []);
   const handleGravityChange = useCallback((gravity: VectorLike) => setConfig((prev) => ({ ...prev, gravity })), []);
   const handleHueCenterChange = useCallback((hueCenter: number) => setConfig((prev) => ({ ...prev, hueCenter })), []);
   const handleHueRangeChange = useCallback((hueRange: number) => setConfig((prev) => ({ ...prev, hueRange })), []);
-  const handleInitialObjectsChange = useCallback((initialObjects: number) => setConfig((prev) => ({ ...prev, initialObjects })), []);
+  const handleInitialEntitiesChange = useCallback((initialEntities: number) => setConfig((prev) => ({ ...prev, initialEntities })), []);
   const handleMaxAgeChange = useCallback((maxAge: number) => setConfig((prev) => ({ ...prev, maxAge })), []);
   const handlePhysicsStepsChange = useCallback((physicsSteps: number) => setConfig((prev) => ({ ...prev, physicsSteps })), []);
-  const handleRadiusMaxChange = useCallback((radiusMax: number) => setConfig((prev) => ({ ...prev, radiusMax })), []);
-  const handleRadiusMinChange = useCallback((radiusMin: number) => setConfig((prev) => ({ ...prev, radiusMin })), []);
+  const handleRadiusChange = useCallback((radiusMin: number, radiusMax: number) => setConfig((prev) => ({ ...prev, radiusMin, radiusMax })), []);
   const handleRestitutionCoefficientChange = useCallback((restitutionCoefficient: number) => setConfig((prev) => ({ ...prev, restitutionCoefficient })), []);
-  const handleShadingChange = useCallback((shading: Shading) => setConfig((prev) => ({ ...prev, shading })), []);
+  const handleShadingChange = useCallback((shading: ShadingType) => setConfig((prev) => ({ ...prev, shadingType: shading })), []);
   const handleStepVelocityRatioChange = useCallback((stepVelocityRatio: number) => setConfig((prev) => ({ ...prev, stepVelocityRatio })), []);
 
   // biome-ignore format: no
@@ -78,44 +84,53 @@ export function Sidebar() {
       </Button>
       {open && <div className='fixed inset-0' onClick={toggleOpen} onTouchEnd={toggleOpen} />}
       <div
-        className='fixed top-0 left-0 bottom-0 w-auto z-10 transition-[translate] transition-discrete border-e-2 border-border rounded-e bg-background aria-hidden:-translate-x-full shadow-2xl aria-hidden:shadow-none shadow-black'
+        className='fixed top-0 left-0 bottom-0 w-auto z-10 transition-[translate] border-e-2 border-border rounded-e bg-background aria-hidden:-translate-x-full shadow-2xl aria-hidden:shadow-none shadow-black'
         role='dialog'
         aria-hidden={!open}
       >
         <div className='flex flex-col gap-2 size-full p-4 select-none overflow-y-auto' ref={ref}>
           <VectorPicker range={1} digits={2} label='Gravity' value={config.gravity} onValueChange={handleGravityChange} />
+
+          <hr />
+
           <Range min={0.1} max={0.5} step={0.01} label='Drag velocity' value={config.dragVelocity} onValueChange={handleDragVelocityChange} />
-          <Range min={0.9} max={1} step={0.001} label='Collide velocity' value={config.collideVelocityRatio} onValueChange={handleCollideVelocityRatioChange} />
-          <Range min={0.9} max={1} step={0.001} label='Step velocity' value={config.stepVelocityRatio} onValueChange={handleStepVelocityRatioChange} />
-          <Range min={0.9} max={1} step={0.001} label='Restitution' value={config.restitutionCoefficient} onValueChange={handleRestitutionCoefficientChange} />
+          <Range
+            min={0.95}
+            max={1.05}
+            step={0.001}
+            label='Collide velocity'
+            value={config.collideVelocityRatio}
+            onValueChange={handleCollideVelocityRatioChange}
+          />
+          <Range min={0.95} max={1.05} step={0.001} label='Step velocity' value={config.stepVelocityRatio} onValueChange={handleStepVelocityRatioChange} />
+          <Range
+            min={0.95}
+            max={1.05}
+            step={0.001}
+            label='Restitution'
+            value={config.restitutionCoefficient}
+            onValueChange={handleRestitutionCoefficientChange}
+          />
           <Range min={1} max={20} label='Physics steps' value={config.physicsSteps} onValueChange={handlePhysicsStepsChange} />
 
           <hr />
 
           <Range min={0} max={10000} step={100} label='Max age' value={config.maxAge} onValueChange={handleMaxAgeChange} />
-          <Range min={0} max={100} step={1} label='Initial objects' value={config.initialObjects} onValueChange={handleInitialObjectsChange} />
+          <Range min={0} max={100} step={1} label='Initial entities' value={config.initialEntities} onValueChange={handleInitialEntitiesChange} />
 
           <hr />
 
-          <Range min={1} max={config.radiusMax} label='Radius min' value={config.radiusMin} onValueChange={handleRadiusMinChange} />
-          <Range min={config.radiusMin} max={200} label='Radius max' value={config.radiusMax} onValueChange={handleRadiusMaxChange} />
           <Range min={0} max={359} label='Hue center' value={config.hueCenter} onValueChange={handleHueCenterChange} />
           <Range min={0} max={180} label='Hue range' value={config.hueRange} onValueChange={handleHueRangeChange} />
 
-          <hr />
+          <RangeTwo min={1} max={200} label='Radius' valueMin={config.radiusMin} valueMax={config.radiusMax} onValueChange={handleRadiusChange} />
+          <RadioSlider options={shadingOptions} value={config.shadingType} onValueChange={handleShadingChange} />
+          <RadioSlider options={entityOptions} value={config.entityType} onValueChange={handleEntityTypeChange} />
 
           <div className='flex gap-2 justify-between'>
             <Switch label='Draw blur' value={config.drawBlur} onValueChange={handleDrawBlurChange} />
-            <Switch label='Click spawn' value={config.clickSpawn} onValueChange={handleClickSpawnChange} />
+            <Switch label='Click to spawn' value={config.clickSpawn} onValueChange={handleClickSpawnChange} />
           </div>
-
-          <hr />
-
-          {/* <Radio label='Shading' options={shadingOptions} value={config.shading} onValueChange={handleShadingChange} />
-
-          <hr /> */}
-
-          <Radio2 options={shadingOptions} value={config.shading} onValueChange={handleShadingChange} />
 
           <hr />
 
@@ -125,7 +140,7 @@ export function Sidebar() {
 
           <hr />
 
-          <a href='https://github.com/idkidk000/physics-thing' className='flex flex-row gap-2 mx-auto'>
+          <a href='https://github.com/idkidk000/physics-thing' target='_blank' rel='noopener noreferrer' className='flex flex-row gap-2 mx-auto'>
             Source
             <svg
               width='24'

@@ -38,6 +38,7 @@
     "rules": {
       "a11y": {
         "noStaticElementInteractions": "off",
+        "useFocusableInteractive": "off",
         "useKeyWithClickEvents": "off"
       },
       "correctness": {

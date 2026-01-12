@@ -22,7 +22,7 @@
 }
 
 @utility slider-thumb {
-  @apply appearance-none box-border size-5 rounded-full border-2 border-border bg-white group-hover:scale-110 transition-[scale,foreground] cursor-pointer;
+  @apply appearance-none box-border size-5 rounded-full border-2 border-border bg-white group-hover:scale-110 transition-[scale] cursor-pointer;
 }
 
 @utility slider-track {

@@ -2,10 +2,16 @@ import { createContext, type Dispatch, type ReactNode, type RefObject, type SetS
 import { useEvent } from '@/hooks/event';
 import type { VectorLike } from '@/lib/2d';
 
-export enum Shading {
+export enum ShadingType {
   Flat,
   TwoTone,
   Gradient,
+}
+
+export enum EntityType {
+  Circle,
+  Both,
+  Square,
 }
 
 export interface Config {
@@ -22,9 +28,12 @@ export interface Config {
   stepVelocityRatio: number;
   restitutionCoefficient: number;
   drawBlur: boolean;
-  shading: Shading;
-  initialObjects: number;
+  shadingType: ShadingType;
+  initialEntities: number;
   clickSpawn: boolean;
+  hueMin: number;
+  hueMax: number;
+  entityType: EntityType;
 }
 
 export const defaultConfig: Config = {
@@ -37,13 +46,16 @@ export const defaultConfig: Config = {
   radiusMax: 70,
   paused: false,
   gravity: { x: 0, y: 0.5 },
-  collideVelocityRatio: 0.99,
-  stepVelocityRatio: 0.997,
-  restitutionCoefficient: 0.995,
+  collideVelocityRatio: 0.999,
+  stepVelocityRatio: 0.999,
+  restitutionCoefficient: 0.999,
   drawBlur: false,
-  shading: Shading.TwoTone,
-  initialObjects: 20,
+  shadingType: ShadingType.TwoTone,
+  initialEntities: 20,
   clickSpawn: false,
+  hueMin: 215,
+  hueMax: 315,
+  entityType: EntityType.Circle,
 };
 
 interface Context {

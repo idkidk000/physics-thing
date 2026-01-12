@@ -1,16 +1,16 @@
 import type { RefObject } from 'react';
 import { type MouseState, MouseStateEvent } from '@/hooks/canvas';
-import type { Config } from '@/hooks/config';
+import { type Config, EntityType } from '@/hooks/config';
 import type { EventEmitter, EventId } from '@/hooks/event';
 import { Point, type PointLike, Vector } from '@/lib/2d';
-import { Circle } from '@/lib/circle';
+import { Circle, type Entity, Square } from '@/lib/entity';
 import { Utils } from '@/lib/utils';
 
 const LIGHT_POSITION: PointLike = { x: 0.5, y: -0.1 };
 
 export class Simulation {
-  #objects: Circle[] = [];
-  #activeObject: Circle | null = null;
+  #entities: Entity[] = [];
+  #activeEntity: Entity | null = null;
   #configRef: RefObject<Config>;
   #deleteIxs = new Set<number>();
   #mouseRef: RefObject<MouseState>;
@@ -30,18 +30,18 @@ export class Simulation {
     eventEmitter.subscribe('reset', () => this.reset(), this.#controller.signal);
     // biome-ignore format: no
     eventEmitter.subscribe('dump', () => {
-      console.log(this.#objects);
-      (window as typeof window & { objects: Circle[] }).objects = this.#objects;
+      console.log(this.#entities);
+      (window as typeof window & { entities: Entity[] }).entities = this.#entities;
     }, this.#controller.signal);
     // biome-ignore format: no
     eventEmitter.subscribe('grow', () => {
-      if (this.#activeObject) ++this.#activeObject.radius;
-      else for (const item of this.#objects) ++item.radius;
+      if (this.#activeEntity) ++this.#activeEntity.radius;
+      else for (const item of this.#entities) ++item.radius;
     }, this.#controller.signal);
   }
   destructor() {
     this.#controller.abort();
-    (window as typeof window & { objects: null }).objects = null;
+    (window as typeof window & { entities: null }).entities = null;
   }
   step(elapsedMillis: number) {
     if (!this.#canvasRef.current) throw new Error('canvasRef is null');
@@ -60,26 +60,26 @@ export class Simulation {
     const canvasMouse = Point.sub(this.#mouseRef.current, position);
 
     if (this.#mouseRef.current.event === MouseStateEvent.End) {
-      if (this.#activeObject) {
+      if (this.#activeEntity) {
         if (canvasMouse.x <= 1 || canvasMouse.y <= 1 || canvasMouse.x >= bounds.x - 1 || canvasMouse.y >= bounds.y - 1)
-          this.#objects = this.#objects.filter((item) => item !== this.#activeObject);
-        this.#activeObject.dragging = false;
-        this.#activeObject = null;
+          this.#entities = this.#entities.filter((item) => item !== this.#activeEntity);
+        this.#activeEntity.dragging = false;
+        this.#activeEntity = null;
       }
       this.#mouseRef.current.event = MouseStateEvent.None;
     } else if (this.#mouseRef.current.event === MouseStateEvent.Start) {
-      if (!this.#activeObject) {
-        this.#activeObject = this.#objects.find((item) => item.age > 20 && item.position.hypot2(canvasMouse) < item.radius ** 2) ?? null;
-        if (this.#activeObject) this.#activeObject.dragging = true;
+      if (!this.#activeEntity) {
+        this.#activeEntity = this.#entities.find((item) => item.age > 20 && item.position.hypot2(canvasMouse) < item.radius ** 2) ?? null;
+        if (this.#activeEntity) this.#activeEntity.dragging = true;
       }
       this.#mouseRef.current.event = MouseStateEvent.None;
     }
-    if (this.#activeObject) {
-      const { x, y } = this.#activeObject.position;
-      this.#activeObject.position.x = canvasMouse.x;
-      this.#activeObject.position.y = canvasMouse.y;
-      const velocity = this.#activeObject.position.sub({ x, y }).divEq(elapsedMillis);
-      this.#activeObject.velocity.addEq(velocity.multEq(this.#configRef.current.dragVelocity));
+    if (this.#activeEntity) {
+      const { x, y } = this.#activeEntity.position;
+      this.#activeEntity.position.x = canvasMouse.x;
+      this.#activeEntity.position.y = canvasMouse.y;
+      const velocity = this.#activeEntity.position.sub({ x, y }).divEq(elapsedMillis);
+      this.#activeEntity.velocity.addEq(velocity.multEq(this.#configRef.current.dragVelocity));
     } else if (this.#configRef.current.clickSpawn && this.#mouseRef.current.buttons) {
       const left = this.#mouseRef.current.buttons & 0x1;
       const right = this.#mouseRef.current.buttons & 0x2;
@@ -87,8 +87,8 @@ export class Simulation {
       this.addObject(canvasMouse, direction);
     }
 
-    if (this.#steps === 0 && this.#objects.length === 0) {
-      for (let i = 0; i < this.#configRef.current.initialObjects; ++i)
+    if (this.#steps === 0 && this.#entities.length === 0) {
+      for (let i = 0; i < this.#configRef.current.initialEntities; ++i)
         this.addObject({
           x: bounds.x * Math.random(),
           y: bounds.y * Math.random(),
@@ -97,24 +97,24 @@ export class Simulation {
 
     const physicsMillis = elapsedMillis / this.#configRef.current.physicsSteps;
     for (let step = 0; step < this.#configRef.current.physicsSteps; ++step) {
-      for (const circle of this.#objects) circle.step(physicsMillis, bounds);
+      for (const circle of this.#entities) circle.step(physicsMillis, bounds);
       // sweep and prune, but with random direction so items aren't pushed to one side
       // https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/23-SAP.html
       // https://youtu.be/euypZDssYxE
       const left = Math.random() > 0.5;
-      const sorted = this.#objects.toSorted(left ? (a, b) => a.left - b.left : (a, b) => b.right - a.right);
+      const sorted = this.#entities.toSorted(left ? (a, b) => a.aabb.min.x - b.aabb.min.x : (a, b) => b.aabb.max.x - a.aabb.max.x);
       for (let i = 0; i < sorted.length; ++i) {
         const item = sorted[i];
         for (let o = i + 1; o < sorted.length; ++o) {
           const other = sorted[o];
-          if (left && other.left > item.right) break;
-          if (!left && other.right < item.left) break;
+          if (left && other.aabb.min.x > item.aabb.max.x) break;
+          if (!left && other.aabb.max.x < item.aabb.min.x) break;
           item.collide(other);
         }
       }
     }
 
-    for (const [i, item] of this.#objects.entries()) {
+    for (const [i, item] of this.#entities.entries()) {
       if (!item.dragging) ++item.age;
       if (!(item.dragging || this.#configRef.current.maxAge === 0) && item.age >= this.#configRef.current.maxAge) --item.opacity;
       else if (item.opacity < 100) ++item.opacity;
@@ -122,7 +122,7 @@ export class Simulation {
     }
 
     if (this.#deleteIxs.size) {
-      this.#objects = this.#objects.filter((_, i) => !this.#deleteIxs.has(i));
+      this.#entities = this.#entities.filter((_, i) => !this.#deleteIxs.has(i));
       this.#deleteIxs.clear();
     }
 
@@ -141,38 +141,52 @@ export class Simulation {
         Point.hypot2(Point.sub(light, { x: canvas.x, y: canvas.y }))
       )
     );
-    for (const item of this.#objects) item.draw(this.#context, light, maxLightDistance);
+    for (const item of this.#entities) item.draw(this.#context, light, maxLightDistance);
   }
-  get objects() {
-    return this.#objects;
+  get entities() {
+    return this.#entities;
   }
-  get activeObject() {
-    return this.#activeObject;
+  get activeEntity() {
+    return this.#activeEntity;
   }
-  set activeObject(item: Circle | null) {
-    if (this.#activeObject) this.#activeObject.dragging = false;
-    this.#activeObject = item;
+  set activeEntity(item: Entity | null) {
+    if (this.#activeEntity) this.#activeEntity.dragging = false;
+    this.#activeEntity = item;
   }
   findObject(point: PointLike, minAge = 20) {
-    return this.#objects.find((item) => item.age >= minAge && item.position.hypot2(point) < item.radius ** 2);
+    return this.#entities.find((item) => item.age >= minAge && item.position.hypot2(point) < item.radius ** 2);
   }
   reset() {
-    this.#activeObject = null;
-    this.#objects = [];
+    this.#activeEntity = null;
+    this.#entities = [];
     this.#steps = 0;
   }
   addObject(point: PointLike, left?: boolean) {
-    this.#objects.push(
-      new Circle(
-        this.#configRef,
-        new Point(point),
-        new Vector({
-          x: left ? -1 : left === false ? 1 : Math.round(Math.random()) * 2 - 1,
-          y: Math.random() - 2,
-        }),
-        Math.round(Math.random() * (this.#configRef.current.radiusMax - this.#configRef.current.radiusMin) + this.#configRef.current.radiusMin),
-        Utils.modP(this.#configRef.current.hueCenter + (Math.random() - 0.5) * this.#configRef.current.hueRange * 2, 360)
-      )
+    this.#entities.push(
+      this.#configRef.current.entityType === EntityType.Circle || (this.#configRef.current.entityType === EntityType.Both && Math.random() > 0.5)
+        ? new Circle(
+            new Point(point),
+            new Vector({
+              x: left ? -1 : left === false ? 1 : Math.round(Math.random()) * 2 - 1,
+              y: Math.random() - 2,
+            }),
+            Math.round(Math.random() * (this.#configRef.current.radiusMax - this.#configRef.current.radiusMin) + this.#configRef.current.radiusMin),
+            Utils.modP(this.#configRef.current.hueCenter + (Math.random() - 0.5) * this.#configRef.current.hueRange * 2, 360),
+            100,
+            this.#configRef
+          )
+        : new Square(
+            new Point(point),
+            new Vector({
+              x: left ? -1 : left === false ? 1 : Math.round(Math.random()) * 2 - 1,
+              y: Math.random() - 2,
+            }),
+            Math.round(Math.random() * (this.#configRef.current.radiusMax - this.#configRef.current.radiusMin) + this.#configRef.current.radiusMin),
+            Math.random() * Math.PI * 2,
+            Utils.modP(this.#configRef.current.hueCenter + (Math.random() - 0.5) * this.#configRef.current.hueRange * 2, 360),
+            100,
+            this.#configRef
+          )
     );
   }
 }

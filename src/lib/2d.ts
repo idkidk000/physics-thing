@@ -201,6 +201,9 @@ export class Vector extends PointOrVector<VectorLike> {
   toRadians(): number {
     return Vector.toRadians(this);
   }
+  toDegrees(): number {
+    return Vector.toDegrees(this);
+  }
 
   static unit(item: VectorLike): VectorLike {
     const hypot = PointOrVector.hypot(item);
@@ -219,6 +222,10 @@ export class Vector extends PointOrVector<VectorLike> {
   }
   static toRadians(item: VectorLike): number {
     return Math.atan2(item.y, item.x);
+  }
+  static toDegrees(item: VectorLike): number {
+    const intermediate = ((Math.atan2(item.y, item.x) / (Math.PI * 2)) * 360 + 90) % 360;
+    return intermediate < 360 ? intermediate + 360 : intermediate;
   }
 }
 
@@ -278,4 +285,16 @@ export class Line {
   static is(item: unknown): item is Line {
     return typeof item === 'object' && item !== null && 'a' in item && 'b' in item && PointOrVector.is(item.a) && PointOrVector.is(item.b);
   }
+}
+
+export interface AABB {
+  min: PointLike;
+  max: PointLike;
+}
+
+export interface Rect {
+  a: PointLike;
+  b: PointLike;
+  c: PointLike;
+  d: PointLike;
 }

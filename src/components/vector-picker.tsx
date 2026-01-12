@@ -23,21 +23,21 @@ export function VectorPicker({
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<HTMLDivElement>(null);
   const deferredValueRef = useRef({ ...value });
-  const spanRef = useRef<HTMLSpanElement>(null);
+  const spanVecRef = useRef<HTMLSpanElement>(null);
+  const spanDegRef = useRef<HTMLSpanElement>(null);
   const timeoutRef = useRef<number | null>(null);
 
   // biome-ignore format: no
   const updateControl = useCallback((vec: VectorLike) => {
-    if (!containerRef.current) return;
-    if (!dragRef.current) return;
-    if (!spanRef.current) return;
+    if (!containerRef.current || !dragRef.current || !spanVecRef.current || !spanDegRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const center: PointLike = { x: rect.width / 2, y: rect.height / 2 };
     const radius = rect.width / 2;
     const position = Point.add(center, Point.mult(Point.div(vec, range), radius));
     dragRef.current.style.left = `${position.x}px`;
     dragRef.current.style.top = `${position.y}px`;
-    spanRef.current.innerText = `{ x: ${vec.x.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}, y: ${vec.y.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })} }`;
+    spanVecRef.current.innerText = `{ x: ${vec.x.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}, y: ${vec.y.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })} }`;
+    spanDegRef.current.innerText = `${Math.round(Vector.toDegrees(vec))}°, strength: ${Vector.hypot(vec).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
   }, [range, digits]);
 
   useEffect(() => updateControl(value), [value, updateControl]);
@@ -74,9 +74,8 @@ export function VectorPicker({
   }, [range, sendDeferredValue, updateControl, updateMillis, digits]);
 
   // biome-ignore format: no
-  const updateLocalValue = useCallback((pointer: { clientX: number; clientY: number }) => {
-    if (!containerRef.current) return;
-    if (!dragRef.current) return;
+  const updateDeferredValue = useCallback((pointer: { clientX: number; clientY: number }) => {
+    if (!containerRef.current || !dragRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const center: PointLike = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
     const radius = rect.width / 2;
@@ -97,32 +96,36 @@ export function VectorPicker({
   // biome-ignore format: no
   const handleMouseMove = useCallback((event: MouseEvent<HTMLDivElement>) => {
     if (event.buttons === 0) return;
-    updateLocalValue(event);
-  }, [updateLocalValue]);
+    updateDeferredValue(event);
+  }, [updateDeferredValue]);
 
-  const handleTouchMove = useCallback((event: TouchEvent<HTMLDivElement>) => updateLocalValue(event.touches[0]), [updateLocalValue]);
+  const handleTouchMove = useCallback((event: TouchEvent<HTMLDivElement>) => updateDeferredValue(event.touches[0]), [updateDeferredValue]);
 
-  const handleMouseClick = useCallback((event: MouseEvent<HTMLDivElement>) => updateLocalValue(event), [updateLocalValue]);
+  const handleMouseClick = useCallback((event: MouseEvent<HTMLDivElement>) => updateDeferredValue(event), [updateDeferredValue]);
 
   // biome-ignore format: no
-  const spanStyle: CSSProperties = useMemo(() => ({
+  const colStyle: CSSProperties = useMemo(() => ({
     minWidth: `${(6 + digits) * 2 + 2}ch`,
   }), [digits]);
 
   return (
-    <div className='grid grid-cols-[1fr_auto] grid-rows-2 gap-x-2 items-end'>
-      <label htmlFor={id} className='row-start-1 col-start-1'>
-        {label}
-      </label>
+    <div className='flex gap-2'>
+      <div className='flex flex-col my-auto grow' style={colStyle}>
+        <label htmlFor={id}>{label}</label>
+        <span ref={spanVecRef} />
+        <span ref={spanDegRef} />
+      </div>
       <div
         ref={containerRef}
         id={id}
-        className='size-40 border-2 border-border rounded-full relative row-start-1 col-start-2 row-span-2 touch-none group'
+        className='size-40 border-2 border-border rounded-full relative touch-none group'
         onMouseMove={handleMouseMove}
         onMouseUp={sendDeferredValue}
         onTouchEnd={sendDeferredValue}
         onTouchMove={handleTouchMove}
         onClick={handleMouseClick}
+        // biome-ignore lint/a11y/useAriaPropsForRole: this is the least unsuitable role but aria-valuenow must be a number
+        role='slider'
       >
         <div ref={dragRef} className='slider-thumb absolute -translate-3 bg-accent cursor-move'></div>
         <svg
@@ -145,7 +148,6 @@ export function VectorPicker({
           <line x1='50' x2='50' y1='0' y2='100' />
         </svg>
       </div>
-      <span ref={spanRef} className='row-start-2 col-start-1 self-start' style={spanStyle} />
     </div>
   );
 }
