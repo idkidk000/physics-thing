@@ -115,6 +115,9 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   eq(other: Interface): boolean {
     return PointOrVector.eq(this, other);
   }
+  inspect(): string {
+    return PointOrVector.inspect(this);
+  }
 
   static add(item: PointOrVectorLike, other: PointOrVectorLike): PointOrVectorLike {
     return { x: item.x + other.x, y: item.y + other.y };
@@ -160,6 +163,10 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   }
   static eq(item: PointOrVectorLike, other: PointOrVectorLike): boolean {
     return item.x === other.x && item.y === other.y;
+  }
+  // no inspect.custom in the browser
+  static inspect(item: PointOrVectorLike): string {
+    return `{x: ${item.x.toFixed(2)}, y: ${item.y.toFixed(2)}}`;
   }
 
   static is(item: unknown): item is PointOrVectorLike {
@@ -207,7 +214,18 @@ export class Vector extends PointOrVector<VectorLike> {
 
   static unit(item: VectorLike): VectorLike {
     const hypot = PointOrVector.hypot(item);
-    return { x: item.x / (hypot || 1), y: item.y / (hypot || 1) };
+    const result = { x: item.x / (hypot || 1), y: item.y / (hypot || 1) };
+    let hasNaN = false;
+    if (Number.isNaN(result.x)) {
+      result.x = 0;
+      hasNaN = true;
+    }
+    if (Number.isNaN(result.y)) {
+      result.y = 0;
+      hasNaN = true;
+    }
+    if (hasNaN) console.error('Vector.unit NaN', 'item', Vector.inspect(item), 'fixed result', Vector.inspect(result));
+    return result;
   }
   static rotate(item: VectorLike, radians: number): VectorLike {
     // https://www.geeksforgeeks.org/maths/rotation-matrix/
@@ -225,7 +243,7 @@ export class Vector extends PointOrVector<VectorLike> {
   }
   static toDegrees(item: VectorLike): number {
     const intermediate = ((Math.atan2(item.y, item.x) / (Math.PI * 2)) * 360 + 90) % 360;
-    return intermediate < 360 ? intermediate + 360 : intermediate;
+    return intermediate < 0 ? intermediate + 360 : intermediate;
   }
 }
 
@@ -292,9 +310,63 @@ export interface AABB {
   max: PointLike;
 }
 
-export interface Rect {
-  a: PointLike;
-  b: PointLike;
-  c: PointLike;
-  d: PointLike;
+export interface CircleLike {
+  position: Point;
+  radius: number;
+  radius2: number;
+}
+
+export interface SquareLike {
+  radius2: number;
+  position: Point;
+  aabb: AABB;
+  points: PointLike[];
+}
+
+export function circleIntersectsPoly(circle: CircleLike, poly: SquareLike): boolean {
+  // clamping circle.position to poly's aabb is from here https://stackoverflow.com/a/1879223
+  /** closest point to circle in poly's aabb (not necessarily inside poly's bb) */
+  const polyAabb = poly.aabb;
+  const ptOtherAabbClosest = Point.clamp(circle.position, polyAabb.min, polyAabb.max);
+  const vecOtherAabbClosest = Vector.sub(ptOtherAabbClosest, circle.position);
+
+  // simulation.step has already tested the aabbs overlap. return early if closest point to circle in poly's aabb is outside our radius
+  if (Vector.hypot2(vecOtherAabbClosest) > circle.radius2) return false;
+
+  // // test for hypot2(circle.pos,poly.pos)<min(circle.r2,poly.r2)
+  // // this shouldn't be necessary
+  // if (Vector.hypot2(Vector.sub(poly.position, circle.position)) < Math.min(circle.radius2, poly.radius2)) return true;
+
+  // test for poly's corners inside circle's radius
+  const polyPoints = poly.points;
+  for (const polyPoint of polyPoints) {
+    const inside = Vector.hypot2(Vector.sub(polyPoint, circle.position)) < circle.radius2;
+    if (inside) return true;
+  }
+
+  /** closest point to poly's aabb on circle's circumference */
+  const ptThisClosest = Point.add(circle.position, Vector.mult(Vector.unit(vecOtherAabbClosest), circle.radius));
+  const lineToClosest: LineLike = { a: circle.position, b: ptThisClosest };
+
+  // test for line from circle.position to ptThisClosest intersecting any line of poly
+  for (let p = 1; p <= polyPoints.length; ++p) {
+    const intersection = Line.intersection(lineToClosest, { a: polyPoints[p - 1], b: polyPoints[p % polyPoints.length] });
+    if (intersection) return true;
+  }
+
+  return false;
+}
+
+export function polyIntersectsPoly(a: SquareLike, b: SquareLike): boolean {
+  const aPoints = a.points;
+  const bPoints = b.points;
+
+  for (let ap = 1; ap <= aPoints.length; ++ap) {
+    const aLine: LineLike = { a: aPoints[ap - 1], b: aPoints[ap % aPoints.length] };
+    for (let bp = 1; bp <= bPoints.length; ++bp) {
+      if (Line.intersection(aLine, { a: bPoints[bp - 1], b: bPoints[bp % bPoints.length] })) return true;
+    }
+  }
+
+  return false;
 }

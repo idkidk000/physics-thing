@@ -73,7 +73,7 @@ export function RangeTwo({
     if (!trackElemRef.current || !valueMinElemRef.current || !valueMaxElemRef.current || !spanElemRef.current) return;
     const minPercent = `${(100 * (valueMin - min)) / (max - min)}%`;
     const maxPercent = `${(100 * (valueMax - min)) / (max - min)}%`;
-    console.debug('RangeTwo updateControl', { valueMin, valueMax }, { minPercent, maxPercent });
+    // console.debug('RangeTwo updateControl', { valueMin, valueMax }, { minPercent, maxPercent });
     trackElemRef.current.style.background = `border-box linear-gradient(to right, transparent ${minPercent}, var(--color-accent) ${minPercent}, var(--color-accent) ${maxPercent}, transparent ${maxPercent}) no-repeat`;
     valueMinElemRef.current.style.left = minPercent;
     valueMaxElemRef.current.style.left = maxPercent;

@@ -84,12 +84,12 @@ export class Simulation {
       const left = this.#mouseRef.current.buttons & 0x1;
       const right = this.#mouseRef.current.buttons & 0x2;
       const direction = left && right ? undefined : left > 0;
-      this.addObject(canvasMouse, direction);
+      this.addEntity(canvasMouse, direction);
     }
 
     if (this.#steps === 0 && this.#entities.length === 0) {
       for (let i = 0; i < this.#configRef.current.initialEntities; ++i)
-        this.addObject({
+        this.addEntity({
           x: bounds.x * Math.random(),
           y: bounds.y * Math.random(),
         });
@@ -101,7 +101,9 @@ export class Simulation {
       // sweep and prune, but with random direction so items aren't pushed to one side
       // https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/23-SAP.html
       // https://youtu.be/euypZDssYxE
-      const left = Math.random() > 0.5;
+      // FIXME: hardcoded temporarily to make debugging collisions easier
+      // const left = Math.random() > 0.5;
+      const left = true;
       const sorted = this.#entities.toSorted(left ? (a, b) => a.aabb.min.x - b.aabb.min.x : (a, b) => b.aabb.max.x - a.aabb.max.x);
       for (let i = 0; i < sorted.length; ++i) {
         const item = sorted[i];
@@ -161,32 +163,24 @@ export class Simulation {
     this.#entities = [];
     this.#steps = 0;
   }
-  addObject(point: PointLike, left?: boolean) {
-    this.#entities.push(
+  addEntity(point: PointLike, left?: boolean) {
+    const params: ConstructorParameters<typeof Entity> = [
+      this.#configRef,
+      {
+        hue: Utils.modP(this.#configRef.current.hueCenter + (Math.random() - 0.5) * this.#configRef.current.hueRange * 2, 360),
+        position: new Point(point),
+        radius: Math.round(Math.random() * (this.#configRef.current.radiusMax - this.#configRef.current.radiusMin) + this.#configRef.current.radiusMin),
+        rotationalVelocity: Math.random() * 2 - 1,
+        velocity: new Vector({
+          x: left ? -1 : left === false ? 1 : Math.round(Math.random()) * 2 - 1,
+          y: Math.random() - 2,
+        }),
+      },
+    ];
+    const entity =
       this.#configRef.current.entityType === EntityType.Circle || (this.#configRef.current.entityType === EntityType.Both && Math.random() > 0.5)
-        ? new Circle(
-            new Point(point),
-            new Vector({
-              x: left ? -1 : left === false ? 1 : Math.round(Math.random()) * 2 - 1,
-              y: Math.random() - 2,
-            }),
-            Math.round(Math.random() * (this.#configRef.current.radiusMax - this.#configRef.current.radiusMin) + this.#configRef.current.radiusMin),
-            Utils.modP(this.#configRef.current.hueCenter + (Math.random() - 0.5) * this.#configRef.current.hueRange * 2, 360),
-            100,
-            this.#configRef
-          )
-        : new Square(
-            new Point(point),
-            new Vector({
-              x: left ? -1 : left === false ? 1 : Math.round(Math.random()) * 2 - 1,
-              y: Math.random() - 2,
-            }),
-            Math.round(Math.random() * (this.#configRef.current.radiusMax - this.#configRef.current.radiusMin) + this.#configRef.current.radiusMin),
-            Math.random() * Math.PI * 2,
-            Utils.modP(this.#configRef.current.hueCenter + (Math.random() - 0.5) * this.#configRef.current.hueRange * 2, 360),
-            100,
-            this.#configRef
-          )
-    );
+        ? new Circle(...params)
+        : new Square(...params);
+    this.#entities.push(entity);
   }
 }

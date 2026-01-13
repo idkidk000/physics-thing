@@ -23,16 +23,20 @@ export default function App() {
     }, controller.signal );
 
     function step(time: number) {
-      if (!controller.signal.aborted) requestAnimationFrame(step);
-
       const timeDelta = Math.min(100, stepState.current.prev ? time - stepState.current.prev : 0);
       stepState.current.prev = time;
+      if (!controller.signal.aborted) requestAnimationFrame(step);
 
       if (configRef.current.paused && !stepState.current.allowOne) return;
       stepState.current.allowOne = false;
 
-      simulationRef.current.step(timeDelta);
-      simulationRef.current.draw();
+      try {
+        simulationRef.current.step(timeDelta);
+        simulationRef.current.draw();
+      } catch (err) {
+        controller.abort();
+        throw err;
+      }
     }
 
     requestAnimationFrame(step);

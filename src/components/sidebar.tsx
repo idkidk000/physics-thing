@@ -35,9 +35,11 @@ export function Sidebar() {
   const handleHueRangeChange = useCallback((hueRange: number) => setConfig((prev) => ({ ...prev, hueRange })), []);
   const handleInitialEntitiesChange = useCallback((initialEntities: number) => setConfig((prev) => ({ ...prev, initialEntities })), []);
   const handleMaxAgeChange = useCallback((maxAge: number) => setConfig((prev) => ({ ...prev, maxAge })), []);
+  const handleMinImpulseChange = useCallback((minImpulse: number) => setConfig((prev) => ({ ...prev, minImpulse })), []);
   const handlePhysicsStepsChange = useCallback((physicsSteps: number) => setConfig((prev) => ({ ...prev, physicsSteps })), []);
   const handleRadiusChange = useCallback((radiusMin: number, radiusMax: number) => setConfig((prev) => ({ ...prev, radiusMin, radiusMax })), []);
   const handleRestitutionCoefficientChange = useCallback((restitutionCoefficient: number) => setConfig((prev) => ({ ...prev, restitutionCoefficient })), []);
+  const handleRotationalVelocityRatioChange = useCallback((rotationalVelocityRatio: number) => setConfig((prev) => ({ ...prev, rotationalVelocityRatio })), []);
   const handleShadingChange = useCallback((shading: ShadingType) => setConfig((prev) => ({ ...prev, shadingType: shading })), []);
   const handleStepVelocityRatioChange = useCallback((stepVelocityRatio: number) => setConfig((prev) => ({ ...prev, stepVelocityRatio })), []);
 
@@ -107,11 +109,20 @@ export function Sidebar() {
             min={0.95}
             max={1.05}
             step={0.001}
+            label='Rotational velocity'
+            value={config.rotationalVelocityRatio}
+            onValueChange={handleRotationalVelocityRatioChange}
+          />
+          <Range
+            min={0.95}
+            max={1.05}
+            step={0.001}
             label='Restitution'
             value={config.restitutionCoefficient}
             onValueChange={handleRestitutionCoefficientChange}
           />
           <Range min={1} max={20} label='Physics steps' value={config.physicsSteps} onValueChange={handlePhysicsStepsChange} />
+          <Range min={0} max={1000} step={10} label='Min impulse' value={config.minImpulse} onValueChange={handleMinImpulseChange} />
 
           <hr />
 

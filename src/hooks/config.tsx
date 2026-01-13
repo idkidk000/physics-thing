@@ -34,6 +34,8 @@ export interface Config {
   hueMin: number;
   hueMax: number;
   entityType: EntityType;
+  minImpulse: number;
+  rotationalVelocityRatio: number;
 }
 
 export const defaultConfig: Config = {
@@ -56,6 +58,8 @@ export const defaultConfig: Config = {
   hueMin: 215,
   hueMax: 315,
   entityType: EntityType.Circle,
+  minImpulse: 100,
+  rotationalVelocityRatio: 1,
 };
 
 interface Context {
