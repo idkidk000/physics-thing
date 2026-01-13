@@ -1,5 +1,5 @@
 import { ShadingType } from '@/hooks/config';
-import { type AABB, circleIntersectsPoly, Point, type PointLike, polyIntersectsPoly, Vector, type VectorLike } from '@/lib/2d';
+import { type AABB, circleIntersectsPoly, Point, type PointLike, polyIntersectsPoly, Vector } from '@/lib/2d';
 import { Circle } from '@/lib/circle';
 import { Entity } from '@/lib/entity';
 import { Utils } from '@/lib/utils';
@@ -7,7 +7,9 @@ import { Utils } from '@/lib/utils';
 /** radius is origin to middle of a side, not corner */
 export class Square extends Entity {
   #mass = 0;
-  #vTopLeft: VectorLike | null = null;
+  #pointsPosition: PointLike | null = null;
+  #points: PointLike[] | null = null;
+  #aabb: AABB | null = null;
   constructor(...params: ConstructorParameters<typeof Entity>) {
     super(...params);
     this.radius = super.radius;
@@ -18,40 +20,46 @@ export class Square extends Entity {
   override set radius(value: number) {
     super.radius = value;
     this.#mass = 4 * value ** 2;
-    this.#vTopLeft = null;
+    this.#pointsPosition = null;
   }
   override get radius(): number {
     return super.radius;
   }
   override set rotation(value: number) {
     super.rotation = value;
-    this.#vTopLeft = null;
+    this.#pointsPosition = null;
   }
   override get rotation(): number {
     return super.rotation;
   }
   get aabb(): AABB {
-    const points = this.points;
-    let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
-    for (const point of points) {
-      minX = Math.min(minX, point.x);
-      minY = Math.min(minY, point.y);
-      maxX = Math.max(maxX, point.x);
-      maxY = Math.max(maxY, point.y);
+    if (!this.#aabb || !this.#pointsPosition || !Point.eq(this.#pointsPosition, this.position)) {
+      const points = this.points;
+      let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
+      for (const point of points) {
+        minX = Math.min(minX, point.x);
+        minY = Math.min(minY, point.y);
+        maxX = Math.max(maxX, point.x);
+        maxY = Math.max(maxY, point.y);
+      }
+      this.#aabb = {
+        min: { x: minX, y: minY },
+        max: { x: maxX, y: maxY },
+      };
     }
-    return {
-      min: { x: minX, y: minY },
-      max: { x: maxX, y: maxY },
-    };
+    return this.#aabb;
   }
   get points(): PointLike[] {
-    if (this.#vTopLeft === null) this.#vTopLeft = Vector.rotate({ x: -this.radius, y: -this.radius }, this.cos, this.sin);
-    return [
-      Point.add(this.position, this.#vTopLeft),
-      Point.add(this.position, { x: -this.#vTopLeft.y, y: this.#vTopLeft.x }),
-      Point.add(this.position, { x: -this.#vTopLeft.x, y: -this.#vTopLeft.y }),
-      Point.add(this.position, { x: this.#vTopLeft.y, y: -this.#vTopLeft.x }),
-    ];
+    if (!this.#points || !this.#pointsPosition || !Point.eq(this.#pointsPosition, this.position)) {
+      const vTopLeft = Vector.rotate({ x: -this.radius, y: -this.radius }, this.cos, this.sin);
+      this.#points = [
+        Point.add(this.position, vTopLeft),
+        Point.add(this.position, { x: -vTopLeft.y, y: vTopLeft.x }),
+        Point.add(this.position, { x: -vTopLeft.x, y: -vTopLeft.y }),
+        Point.add(this.position, { x: vTopLeft.y, y: -vTopLeft.x }),
+      ];
+    }
+    return this.#points;
   }
   intersects(other: Entity): boolean {
     if (this.aabb.min.x > other.aabb.max.x || this.aabb.max.x < other.aabb.min.x || this.aabb.min.y > other.aabb.max.y || this.aabb.max.y < other.aabb.min.y)

@@ -1,11 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/button';
 import { RadioSlider } from '@/components/radio';
 import { Range, RangeTwo } from '@/components/range';
 import { Switch } from '@/components/switch';
 import { VectorPicker } from '@/components/vector-picker';
 import { EntityType, ShadingType, useConfig } from '@/hooks/config';
-import { HotKeys } from '@/hooks/event';
+import { HotKeys, useEvent } from '@/hooks/event';
 import type { VectorLike } from '@/lib/2d';
 
 const shadingOptions = [
@@ -24,6 +24,13 @@ export function Sidebar() {
   const { config, setConfig } = useConfig();
   const [open, setOpen] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
+  const { eventRef } = useEvent();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    eventRef.current.subscribe('menu', () => setOpen((prev) => !prev), controller.signal);
+    return () => controller.abort();
+  }, []);
 
   const handleClickSpawnChange = useCallback((clickSpawn: boolean) => setConfig((prev) => ({ ...prev, clickSpawn })), []);
   const handleCollideVelocityRatioChange = useCallback((collideVelocityRatio: number) => setConfig((prev) => ({ ...prev, collideVelocityRatio })), []);

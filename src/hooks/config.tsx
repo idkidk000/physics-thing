@@ -35,6 +35,8 @@ export interface Config {
   minImpulse: number;
   collideRotationalVelocityRatio: number;
   rotationalVelocityRatio: number;
+  showDebug: boolean;
+  minCollisionVelocityToImpartRotationalVelocity: number;
 }
 
 export const defaultConfig: Config = {
@@ -55,9 +57,11 @@ export const defaultConfig: Config = {
   initialEntities: 20,
   clickSpawn: false,
   entityType: EntityType.Both,
-  minImpulse: 50,
+  minImpulse: 10,
   collideRotationalVelocityRatio: 0.99,
-  rotationalVelocityRatio: 0.99,
+  rotationalVelocityRatio: 0.998,
+  showDebug: false,
+  minCollisionVelocityToImpartRotationalVelocity: 1,
 };
 
 interface Context {
@@ -88,6 +92,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     const controller = new AbortController();
     eventRef.current.subscribe('pause', () => setConfig((prev) => ({ ...prev, paused: !prev.paused })), controller.signal);
     eventRef.current.subscribe('defaults', () => setConfig(defaultConfig), controller.signal);
+    eventRef.current.subscribe('showDebug', () => setConfig((prev) => ({ ...prev, showDebug: !prev.showDebug })), controller.signal);
     return () => controller.abort();
   }, []);
 

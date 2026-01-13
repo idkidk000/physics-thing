@@ -27,12 +27,10 @@ export default function App() {
       stepState.current.prev = time;
       if (!controller.signal.aborted) requestAnimationFrame(step);
 
-      if (configRef.current.paused && !stepState.current.allowOne) return;
-      stepState.current.allowOne = false;
-
       try {
-        simulationRef.current.step(timeDelta);
-        simulationRef.current.draw();
+        if (!configRef.current.paused || stepState.current.allowOne) simulationRef.current.step(timeDelta);
+        stepState.current.allowOne = false;
+        simulationRef.current.draw(timeDelta);
       } catch (err) {
         controller.abort();
         throw err;

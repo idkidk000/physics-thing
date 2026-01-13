@@ -306,25 +306,19 @@ export interface CircleLike {
   radius2: number;
 }
 
-export interface SquareLike {
+export interface PolyLike {
   radius2: number;
+  radius: number;
   position: Point;
   aabb: AABB;
   points: PointLike[];
 }
 
-export function circleIntersectsPoly(circle: CircleLike, poly: SquareLike): boolean {
+export function circleIntersectsPoly(circle: CircleLike, poly: PolyLike): boolean {
   // clamping circle.position to poly's aabb is from here https://stackoverflow.com/a/1879223
-  /** closest point to circle in poly's aabb (not necessarily inside poly's bb) */
-  const polyAabb = poly.aabb;
-  const ptOtherAabbClosest = Point.clamp(circle.position, polyAabb.min, polyAabb.max);
-  const vecOtherAabbClosest = Vector.sub(ptOtherAabbClosest, circle.position);
-
-  // simulation.step has already tested the AABBs overlap. return early if closest point to circle in poly's aabb is outside our radius
-  if (Vector.hypot2(vecOtherAabbClosest) > circle.radius2) return false;
-
-  // test for hypot2(circle.pos,poly.pos)<min(circle.r2,poly.r2) - should deal with circle fully enclosed in poly
-  if (Vector.hypot2(Vector.sub(poly.position, circle.position)) < Math.max(circle.radius2, poly.radius2)) return true;
+  /** closest point to circle in poly's aabb (not necessarily inside poly's bb or even different from circle.position) */
+  const ptOtherAabbClosest = Point.clamp(circle.position, poly.aabb.min, poly.aabb.max);
+  const vecOtherAabbClosest = Vector.sub(Point.eq(circle.position, ptOtherAabbClosest) ? poly.position : ptOtherAabbClosest, circle.position);
 
   // test for poly's corners inside circle's radius
   const polyPoints = poly.points;
@@ -346,7 +340,7 @@ export function circleIntersectsPoly(circle: CircleLike, poly: SquareLike): bool
   return false;
 }
 
-export function polyIntersectsPoly(a: SquareLike, b: SquareLike): boolean {
+export function polyIntersectsPoly(a: PolyLike, b: PolyLike): boolean {
   const aPoints = a.points;
   const bPoints = b.points;
 

@@ -20,6 +20,7 @@ export class Simulation {
   #canvasRef: RefObject<HTMLCanvasElement | null>;
   #context: CanvasRenderingContext2D | null = null;
   #controller = new AbortController();
+  #timeDeltas: number[] = [];
   constructor(
     eventEmitter: EventEmitter<EventId>,
     configRef: RefObject<Config>,
@@ -45,6 +46,17 @@ export class Simulation {
       if (this.#activeEntity) this.#activeEntity.fixed = !this.#activeEntity.fixed;
       else for (const item of this.#entities) item.fixed = !item.fixed;
     }, this.#controller.signal);
+    // biome-ignore format: no
+    eventEmitter.subscribe('zero', () => {
+      if (this.#activeEntity) this.#activeEntity.zero();
+      else for (const item of this.#entities) item.zero();
+    }, this.#controller.signal);
+    // biome-ignore format: no
+    eventEmitter.subscribe('rotate', () => {
+      if (this.#activeEntity) this.#activeEntity.rotation += 0.1;
+      else for (const item of this.#entities) item.rotation += 0.1;
+    }, this.#controller.signal);
+    eventEmitter.subscribe('add', () => this.addEntity(mouseRef.current), this.#controller.signal);
   }
   destructor() {
     this.#controller.abort();
@@ -54,16 +66,8 @@ export class Simulation {
     if (!this.#canvasRef.current) throw new Error('canvasRef is null');
     const rect = this.#canvasRef.current.getBoundingClientRect();
     const bounds = Point.round({ x: rect.width, y: rect.height });
-    this.#canvasRef.current.width = bounds.x;
-    this.#canvasRef.current.height = bounds.y;
-    if (this.#context === null) {
-      const context = this.#canvasRef.current.getContext('2d');
-      if (!context) throw new Error('could not get 2d context');
-      this.#context = context;
-    }
-    this.#context.clearRect(0, 0, bounds.x, bounds.y);
-    const position = Point.round({ x: rect.left, y: rect.top });
 
+    const position = Point.round({ x: rect.left, y: rect.top });
     const canvasMouse = Point.sub(this.#mouseRef.current, position);
 
     if (this.#mouseRef.current.event === MouseStateEvent.End) {
@@ -105,19 +109,16 @@ export class Simulation {
     const physicsMillis = elapsedMillis / this.#configRef.current.physicsSteps;
     for (let step = 0; step < this.#configRef.current.physicsSteps; ++step) {
       for (const circle of this.#entities) circle.step(physicsMillis, bounds);
-      // sweep and prune, but with random direction so items aren't pushed to one side
+      // sweep and prune
       // https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/23-SAP.html
       // https://youtu.be/euypZDssYxE
-      // FIXME: hardcoded temporarily to make debugging collisions easier
-      // const left = Math.random() > 0.5;
-      const left = true;
-      const sorted = this.#entities.toSorted(left ? (a, b) => a.aabb.min.x - b.aabb.min.x : (a, b) => b.aabb.max.x - a.aabb.max.x);
+      const sorted = this.#entities.toSorted((a, b) => a.aabb.min.x - b.aabb.min.x);
       for (let i = 0; i < sorted.length; ++i) {
         const item = sorted[i];
+        const maxX = item.aabb.max.x;
         for (let o = i + 1; o < sorted.length; ++o) {
           const other = sorted[o];
-          if (left && other.aabb.min.x > item.aabb.max.x) break;
-          if (!left && other.aabb.max.x < item.aabb.min.x) break;
+          if (other.aabb.min.x > maxX) break;
           item.collide(other);
         }
       }
@@ -137,20 +138,55 @@ export class Simulation {
 
     ++this.#steps;
   }
-  draw() {
-    if (!this.#context) throw new Error('could not get 2d context');
+  draw(timeDelta: number) {
     if (!this.#canvasRef.current) throw new Error('canvasRef is null');
-    const canvas: PointLike = { x: this.#canvasRef.current.width, y: this.#canvasRef.current.height };
-    const light = Point.mult(canvas, LIGHT_POSITION);
+    const rect = this.#canvasRef.current.getBoundingClientRect();
+    const bounds = Point.round({ x: rect.width, y: rect.height });
+    this.#canvasRef.current.width = bounds.x;
+    this.#canvasRef.current.height = bounds.y;
+    if (this.#context === null) {
+      const context = this.#canvasRef.current?.getContext('2d');
+      if (!context) throw new Error('could not get 2d context');
+      this.#context = context;
+    }
+
+    const light = Point.mult(bounds, LIGHT_POSITION);
     const maxLightDistance = Math.sqrt(
       Math.max(
         Point.hypot2(Point.sub(light, { x: 0, y: 0 })),
-        Point.hypot2(Point.sub(light, { x: canvas.x, y: 0 })),
-        Point.hypot2(Point.sub(light, { x: 0, y: canvas.y })),
-        Point.hypot2(Point.sub(light, { x: canvas.x, y: canvas.y }))
+        Point.hypot2(Point.sub(light, { x: bounds.x, y: 0 })),
+        Point.hypot2(Point.sub(light, { x: 0, y: bounds.y })),
+        Point.hypot2(Point.sub(light, { x: bounds.x, y: bounds.y }))
       )
     );
+    this.#context.clearRect(0, 0, bounds.x, bounds.y);
     for (const item of this.#entities) item.draw(this.#context, light, maxLightDistance);
+    if (this.#configRef.current.showDebug) {
+      for (const item of this.#entities) item.drawDebug(this.#context);
+      this.#context.textAlign = 'right';
+      this.#context.textBaseline = 'top';
+      this.#context.fillStyle = '#ff0';
+      if (this.#timeDeltas.length === 100) this.#timeDeltas = [...this.#timeDeltas.slice(-99), timeDelta];
+      else this.#timeDeltas.push(timeDelta);
+      const avg = this.#timeDeltas.reduce((acc, item) => acc + item) / this.#timeDeltas.length;
+      this.#context.fillText(`${(1000 / avg).toFixed(1)}`, bounds.x, 0);
+      this.#context.fillText(this.entities.length.toLocaleString(), bounds.x, 10);
+    }
+    if (this.#configRef.current.paused) {
+      const prev = this.#context.font;
+      this.#context.font = `${bounds.x / 10}px system-ui`;
+      this.#context.textBaseline = 'middle';
+      this.#context.textAlign = 'center';
+      const style = window.getComputedStyle(document.body);
+      this.#context.fillStyle = style.color;
+      this.#context.shadowBlur = 50;
+      this.#context.shadowColor = style.backgroundColor;
+      this.#context.fillText('Paused', bounds.x / 2, bounds.y / 2);
+      this.#context.fillText('Paused', bounds.x / 2, bounds.y / 2);
+      this.#context.fillText('Paused', bounds.x / 2, bounds.y / 2);
+      this.#context.shadowBlur = 0;
+      this.#context.font = prev;
+    }
   }
   get entities() {
     return this.#entities;
@@ -188,6 +224,7 @@ export class Simulation {
       this.#configRef.current.entityType === EntityType.Circle || (this.#configRef.current.entityType === EntityType.Both && Math.random() > 0.5)
         ? new Circle(...params)
         : new Square(...params);
-    this.#entities.push(entity);
+    if (this.#entities.length === 100) this.#entities = [...this.entities.slice(-99), entity];
+    else this.#entities.push(entity);
   }
 }

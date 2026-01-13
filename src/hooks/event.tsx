@@ -21,6 +21,7 @@ interface Event {
   keyName: string;
   label: string;
   id: string;
+  hidden?: true;
 }
 
 export const events = [
@@ -33,6 +34,11 @@ export const events = [
   { id: 'defaults', keyName: 'c', label: 'Reset config' },
   { id: 'step', keyName: 's', label: 'Single step' },
   { id: 'fixed', keyName: 'i', label: 'Toggle fixed' },
+  { id: 'showDebug', keyName: 'e', label: 'Toggle debug' },
+  { id: 'zero', keyName: 'z', label: 'Zero rotation' },
+  { id: 'add', keyName: 'a', label: 'Add entity' },
+  { id: 'rotate', keyName: 'o', label: 'Rotate' },
+  { id: 'menu', keyName: 'm', label: 'Menu', hidden: true },
 ] as const satisfies Event[];
 
 export type EventId = (typeof events)[number]['id'];
@@ -114,9 +120,11 @@ function HotKey({
 export function HotKeys({ className }: { className?: string }) {
   return (
     <>
-      {events.map((props) => (
-        <HotKey key={props.keyName} className={className} {...props} />
-      ))}
+      {events
+        .filter((event) => !('hidden' in event))
+        .map((props) => (
+          <HotKey key={props.keyName} className={className} {...props} />
+        ))}
     </>
   );
 }

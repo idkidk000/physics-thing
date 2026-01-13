@@ -1,6 +1,6 @@
 import type { RefObject } from 'react';
 import type { Config } from '@/hooks/config';
-import { type AABB, type Point, type PointLike, Vector } from '@/lib/2d';
+import { type AABB, Point, type PointLike, Vector, type VectorLike } from '@/lib/2d';
 
 export enum Hull {
   Circle,
@@ -23,6 +23,7 @@ export abstract class Entity {
   #velocity: Vector;
   #cos: number | null = null;
   #sin: number | null = null;
+  #collisions: VectorLike[] = [];
 
   constructor(
     protected configRef: RefObject<Config>,
@@ -148,29 +149,30 @@ export abstract class Entity {
   collide(other: Entity): void {
     if (!this.intersects(other)) return;
 
-    const collisionNormal = new Vector(other.position).subEq(this.position).unitEq();
-    const velocityVector = other.velocity.sub(this.velocity);
-    const normalVelocityDp = velocityVector.dot(collisionNormal);
+    const collisionVector = Vector.sub(other.position, this.position);
+    if (this.configRef.current.showDebug) this.#collisions.push(collisionVector);
+    const collisionNormal = Vector.unit(collisionVector);
+    const velocityVector = Vector.sub(other.velocity, this.velocity);
+    const normalVelocityDp = Vector.dot(velocityVector, collisionNormal);
 
-    if (normalVelocityDp > 0) return;
+    if (normalVelocityDp > 0.1) return;
 
     const impulse = Math.max(
       this.configRef.current.minImpulse,
       (-(1 + this.configRef.current.restitutionCoefficient) * normalVelocityDp) / (1 / this.mass + 1 / other.mass)
     );
-    const impulseVector = collisionNormal.mult(impulse);
+    const impulseVector = Vector.mult(collisionNormal, impulse);
 
-    this.velocity.subEq(impulseVector.div(this.mass)).multEq(this.configRef.current.collideVelocityRatio);
-    other.velocity.addEq(impulseVector.div(other.mass)).multEq(this.configRef.current.collideVelocityRatio);
+    this.velocity.subEq(Vector.div(impulseVector, this.mass)).multEq(this.configRef.current.collideVelocityRatio);
+    other.velocity.addEq(Vector.div(impulseVector, other.mass)).multEq(this.configRef.current.collideVelocityRatio);
+
+    if (other.fixed) this.position.subEq(collisionNormal);
+    if (this.fixed) other.position.addEq(collisionNormal);
 
     // TODO: doing this properly requires the vector to the collision point
-    this.rotationalVelocity += (impulse / other.mass) * Math.round(Math.random() * 2 - 1) * this.configRef.current.collideRotationalVelocityRatio;
-    this.rotationalVelocity += (impulse / this.mass) * Math.round(Math.random() * 2 - 1) * this.configRef.current.collideRotationalVelocityRatio;
-
-    if (this.fixed || other.fixed) {
-      const idk = collisionNormal.mult(Math.max(1, velocityVector.hypot()));
-      if (other.fixed) this.position.subEq(idk);
-      if (this.fixed) other.position.addEq(idk);
+    if (Vector.hypot2(velocityVector) > this.configRef.current.minCollisionVelocityToImpartRotationalVelocity ** 2) {
+      this.rotationalVelocity += (impulse / this.mass) * Math.round(Math.random() * 2 - 1) * this.configRef.current.collideRotationalVelocityRatio;
+      other.rotationalVelocity += (impulse / other.mass) * Math.round(Math.random() * 2 - 1) * this.configRef.current.collideRotationalVelocityRatio;
     }
   }
   step(millis: number, bounds: PointLike): void {
@@ -178,8 +180,8 @@ export abstract class Entity {
     if (!this.#dragging && !this.#fixed) {
       this.velocity.addEq(Vector.mult(config.gravity, 0.003));
       this.position.addEq(this.velocity.mult(millis));
+      this.rotation += this.rotationalVelocity * 0.01;
     }
-    this.rotation += this.rotationalVelocity * 0.01;
 
     let hit = false;
     if (this.aabb.min.x < 0) {
@@ -206,4 +208,33 @@ export abstract class Entity {
     this.rotationalVelocity *= config.rotationalVelocityRatio * (hit ? config.collideRotationalVelocityRatio : 1);
   }
   abstract draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void;
+  drawDebug(context: CanvasRenderingContext2D) {
+    context.strokeStyle = '#0f0';
+    context.strokeRect(this.aabb.min.x, this.aabb.min.y, this.aabb.max.x - this.aabb.min.x, this.aabb.max.y - this.aabb.min.y);
+    context.fillStyle = '#0f0';
+    context.textBaseline = 'bottom';
+    context.textAlign = 'right';
+    context.fillText(
+      `{ x: ${this.velocity.x.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}, y: ${this.velocity.y.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })}, r: ${this.rotationalVelocity.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} }`,
+      this.aabb.max.x,
+      this.aabb.min.y
+    );
+    if (this.#collisions.length) {
+      context.strokeStyle = '#f00';
+      context.beginPath();
+      for (const collisionVector of this.#collisions) {
+        context.moveTo(this.position.x, this.position.y);
+        const endPoint = Point.add(this.position, collisionVector);
+        context.lineTo(endPoint.x, endPoint.y);
+      }
+      context.stroke();
+      this.#collisions = [];
+    }
+  }
+  zero() {
+    this.velocity.x = 0;
+    this.velocity.y = 0;
+    this.rotationalVelocity = 0;
+    this.rotation = 0;
+  }
 }
