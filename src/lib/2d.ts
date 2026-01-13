@@ -184,8 +184,8 @@ export class Vector extends PointOrVector<VectorLike> {
   unit(): Vector {
     return new Vector(Vector.unit(this));
   }
-  rotate(radians: number): Vector {
-    return new Vector(Vector.rotate(this, radians));
+  rotate(...params: [radians: number] | [cos: number, sin: number]): Vector {
+    return new Vector(Vector.rotate(this, ...params));
   }
   dot(other: VectorLike): number {
     return Vector.dot(this, other);
@@ -196,8 +196,8 @@ export class Vector extends PointOrVector<VectorLike> {
     [this.x, this.y] = [x, y];
     return this;
   }
-  rotateEq(radians: number): this {
-    const { x, y } = Vector.rotate(this, radians);
+  rotateEq(...params: [radians: number] | [cos: number, sin: number]): this {
+    const { x, y } = Vector.rotate(this, ...params);
     [this.x, this.y] = [x, y];
     return this;
   }
@@ -215,21 +215,11 @@ export class Vector extends PointOrVector<VectorLike> {
   static unit(item: VectorLike): VectorLike {
     const hypot = PointOrVector.hypot(item);
     const result = { x: item.x / (hypot || 1), y: item.y / (hypot || 1) };
-    let hasNaN = false;
-    if (Number.isNaN(result.x)) {
-      result.x = 0;
-      hasNaN = true;
-    }
-    if (Number.isNaN(result.y)) {
-      result.y = 0;
-      hasNaN = true;
-    }
-    if (hasNaN) console.error('Vector.unit NaN', 'item', Vector.inspect(item), 'fixed result', Vector.inspect(result));
     return result;
   }
-  static rotate(item: VectorLike, radians: number): VectorLike {
+  static rotate(item: VectorLike, ...params: [radians: number] | [cos: number, sin: number]): VectorLike {
     // https://www.geeksforgeeks.org/maths/rotation-matrix/
-    const [cos, sin] = [Math.cos(radians), Math.sin(radians)];
+    const [cos, sin] = params.length === 1 ? [Math.cos(params[0]), Math.sin(params[0])] : params;
     return {
       x: cos * item.x - sin * item.y,
       y: sin * item.x + cos * item.y,
@@ -330,12 +320,11 @@ export function circleIntersectsPoly(circle: CircleLike, poly: SquareLike): bool
   const ptOtherAabbClosest = Point.clamp(circle.position, polyAabb.min, polyAabb.max);
   const vecOtherAabbClosest = Vector.sub(ptOtherAabbClosest, circle.position);
 
-  // simulation.step has already tested the aabbs overlap. return early if closest point to circle in poly's aabb is outside our radius
+  // simulation.step has already tested the AABBs overlap. return early if closest point to circle in poly's aabb is outside our radius
   if (Vector.hypot2(vecOtherAabbClosest) > circle.radius2) return false;
 
-  // // test for hypot2(circle.pos,poly.pos)<min(circle.r2,poly.r2)
-  // // this shouldn't be necessary
-  // if (Vector.hypot2(Vector.sub(poly.position, circle.position)) < Math.min(circle.radius2, poly.radius2)) return true;
+  // test for hypot2(circle.pos,poly.pos)<min(circle.r2,poly.r2) - should deal with circle fully enclosed in poly
+  if (Vector.hypot2(Vector.sub(poly.position, circle.position)) < Math.max(circle.radius2, poly.radius2)) return true;
 
   // test for poly's corners inside circle's radius
   const polyPoints = poly.points;

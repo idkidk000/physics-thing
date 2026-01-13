@@ -3,7 +3,9 @@ import { type MouseState, MouseStateEvent } from '@/hooks/canvas';
 import { type Config, EntityType } from '@/hooks/config';
 import type { EventEmitter, EventId } from '@/hooks/event';
 import { Point, type PointLike, Vector } from '@/lib/2d';
-import { Circle, type Entity, Square } from '@/lib/entity';
+import { Circle } from '@/lib/circle';
+import type { Entity } from '@/lib/entity';
+import { Square } from '@/lib/square';
 import { Utils } from '@/lib/utils';
 
 const LIGHT_POSITION: PointLike = { x: 0.5, y: -0.1 };
@@ -37,6 +39,11 @@ export class Simulation {
     eventEmitter.subscribe('grow', () => {
       if (this.#activeEntity) ++this.#activeEntity.radius;
       else for (const item of this.#entities) ++item.radius;
+    }, this.#controller.signal);
+    // biome-ignore format: no
+    eventEmitter.subscribe('fixed', () => {
+      if (this.#activeEntity) this.#activeEntity.fixed = !this.#activeEntity.fixed;
+      else for (const item of this.#entities) item.fixed = !item.fixed;
     }, this.#controller.signal);
   }
   destructor() {

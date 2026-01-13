@@ -32,6 +32,7 @@ export const events = [
   { id: 'reload', keyName: 'l', label: 'Reload renderer' },
   { id: 'defaults', keyName: 'c', label: 'Reset config' },
   { id: 'step', keyName: 's', label: 'Single step' },
+  { id: 'fixed', keyName: 'i', label: 'Toggle fixed' },
 ] as const satisfies Event[];
 
 export type EventId = (typeof events)[number]['id'];

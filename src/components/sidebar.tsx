@@ -27,6 +27,10 @@ export function Sidebar() {
 
   const handleClickSpawnChange = useCallback((clickSpawn: boolean) => setConfig((prev) => ({ ...prev, clickSpawn })), []);
   const handleCollideVelocityRatioChange = useCallback((collideVelocityRatio: number) => setConfig((prev) => ({ ...prev, collideVelocityRatio })), []);
+  const handleCollideRotationalVelocityRatioChange = useCallback(
+    (collideRotationalVelocityRatio: number) => setConfig((prev) => ({ ...prev, collideRotationalVelocityRatio })),
+    []
+  );
   const handleDragVelocityChange = useCallback((dragVelocity: number) => setConfig((prev) => ({ ...prev, dragVelocity })), []);
   const handleDrawBlurChange = useCallback((drawBlur: boolean) => setConfig((prev) => ({ ...prev, drawBlur })), []);
   const handleEntityTypeChange = useCallback((entityType: EntityType) => setConfig((prev) => ({ ...prev, entityType })), []);
@@ -112,6 +116,14 @@ export function Sidebar() {
             label='Rotational velocity'
             value={config.rotationalVelocityRatio}
             onValueChange={handleRotationalVelocityRatioChange}
+          />
+          <Range
+            min={0.95}
+            max={1.05}
+            step={0.001}
+            label='Collide rotational velocity'
+            value={config.collideRotationalVelocityRatio}
+            onValueChange={handleCollideRotationalVelocityRatioChange}
           />
           <Range
             min={0.95}

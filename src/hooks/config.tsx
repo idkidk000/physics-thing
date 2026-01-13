@@ -31,16 +31,15 @@ export interface Config {
   shadingType: ShadingType;
   initialEntities: number;
   clickSpawn: boolean;
-  hueMin: number;
-  hueMax: number;
   entityType: EntityType;
   minImpulse: number;
+  collideRotationalVelocityRatio: number;
   rotationalVelocityRatio: number;
 }
 
 export const defaultConfig: Config = {
   dragVelocity: 0.25,
-  hueCenter: 265,
+  hueCenter: 220,
   hueRange: 50,
   maxAge: 0,
   physicsSteps: 5,
@@ -49,17 +48,16 @@ export const defaultConfig: Config = {
   paused: false,
   gravity: { x: 0, y: 0.5 },
   collideVelocityRatio: 0.999,
-  stepVelocityRatio: 0.999,
+  stepVelocityRatio: 0.996,
   restitutionCoefficient: 0.999,
   drawBlur: false,
   shadingType: ShadingType.TwoTone,
   initialEntities: 20,
   clickSpawn: false,
-  hueMin: 215,
-  hueMax: 315,
-  entityType: EntityType.Circle,
-  minImpulse: 100,
-  rotationalVelocityRatio: 1,
+  entityType: EntityType.Both,
+  minImpulse: 50,
+  collideRotationalVelocityRatio: 0.99,
+  rotationalVelocityRatio: 0.99,
 };
 
 interface Context {
