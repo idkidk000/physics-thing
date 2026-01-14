@@ -224,6 +224,14 @@ export abstract class Entity {
       context.stroke();
       this.#collisions = [];
     }
+    if (this.points.length) {
+      context.strokeStyle = '#f0f';
+      context.beginPath();
+      context.moveTo(this.points[0].x, this.points[0].y);
+      for (const point of this.points.slice(1)) context.lineTo(point.x, point.y);
+      context.closePath();
+      context.stroke();
+    }
   }
   zero() {
     this.velocity.x = 0;

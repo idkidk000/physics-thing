@@ -45,6 +45,7 @@ export function Sidebar() {
   const handleRotationalVelocityRatioChange = useCallback((rotationalVelocityRatio: number) => setConfig((prev) => ({ ...prev, rotationalVelocityRatio })), []);
   const handleShadingChange = useCallback((shading: ShadingType) => setConfig((prev) => ({ ...prev, shadingType: shading })), []);
   const handleStepVelocityRatioChange = useCallback((stepVelocityRatio: number) => setConfig((prev) => ({ ...prev, stepVelocityRatio })), []);
+  const handleLightMotionChange = useCallback((lightMotion: number) => setConfig((prev) => ({ ...prev, lightMotion })), []);
 
   // biome-ignore format: no
   const toggleOpen = useCallback(() => setOpen((prev) => {
@@ -144,6 +145,7 @@ export function Sidebar() {
 
           <Range min={0} max={359} label='Hue center' value={config.hueCenter} onValueChange={handleHueCenterChange} />
           <Range min={0} max={180} label='Hue range' value={config.hueRange} onValueChange={handleHueRangeChange} />
+          <Range min={0} max={100} label='Light motion' value={config.lightMotion} onValueChange={handleLightMotionChange} />
 
           <RangeTwo min={1} max={200} label='Radius' valueMin={config.radiusMin} valueMax={config.radiusMax} onValueChange={handleRadiusChange} />
 

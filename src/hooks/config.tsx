@@ -13,6 +13,7 @@ export enum EntityType {
   Circle = 1,
   Square = 2,
   Heart = 4,
+  Star = 8,
 }
 
 export interface Config {
@@ -39,31 +40,33 @@ export interface Config {
   rotationalVelocityRatio: number;
   showDebug: boolean;
   minCollisionVelocityToImpartRotationalVelocity: number;
+  lightMotion: number;
 }
 
 export const defaultConfig: Config = {
   dragVelocity: 0.25,
   hueCenter: 220,
-  hueRange: 50,
+  hueRange: 60,
   maxAge: 0,
   physicsSteps: 5,
   radiusMin: 20,
   radiusMax: 70,
   paused: false,
-  gravity: { x: 0, y: 0.5 },
+  gravity: { x: 0, y: 0 },
   collideVelocityRatio: 0.999,
-  stepVelocityRatio: 0.996,
+  stepVelocityRatio: 0.999,
   restitutionCoefficient: 0.999,
   drawBlur: false,
   shadingType: ShadingType.TwoTone,
   initialEntities: 20,
   clickSpawn: false,
-  entityType: EntityType.Circle | EntityType.Square | EntityType.Heart,
+  entityType: EntityType.Circle | EntityType.Square | EntityType.Heart | EntityType.Star,
   minImpulse: 10,
   collideRotationalVelocityRatio: 0.99,
-  rotationalVelocityRatio: 0.998,
+  rotationalVelocityRatio: 0.999,
   showDebug: false,
   minCollisionVelocityToImpartRotationalVelocity: 1,
+  lightMotion: 10,
 };
 
 interface Context {

@@ -5,6 +5,7 @@ export function pointInCircle(point: PointLike, circle: CircleLike): boolean {
 }
 
 export function pointInPoly(point: PointLike, poly: PolyLike): boolean {
+  if (point.x < poly.aabb.min.x || point.x > poly.aabb.max.x || point.y < poly.aabb.min.y || point.y > poly.aabb.max.y) return false;
   let intersections = 0;
   for (let pp = 1; pp <= poly.points.length; ++pp) {
     const polyLine: LineLike = { a: poly.points[pp - 1], b: poly.points[pp % poly.points.length] };
@@ -31,6 +32,7 @@ export function circleIntersectsPoly(circle: CircleLike, poly: PolyLike): boolea
   return false;
 }
 
+/** this would also reqire line intersection checks if a or b could be rectangles */
 export function polyIntersectsPoly(a: PolyLike, b: PolyLike): boolean {
   for (const point of a.points) if (pointInPoly(point, b)) return true;
   for (const point of b.points) if (pointInPoly(point, a)) return true;

@@ -140,6 +140,9 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   inspect(): string {
     return PointOrVector.inspect(this);
   }
+  toInterface(): Interface {
+    return { x: this.x, y: this.y } as unknown as Interface;
+  }
 
   static add(item: PointOrVectorLike, other: PointOrVectorLike): PointOrVectorLike {
     return { x: item.x + other.x, y: item.y + other.y };

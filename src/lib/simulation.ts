@@ -7,9 +7,8 @@ import type { Entity } from '@/lib/entity/base';
 import { Circle } from '@/lib/entity/circle';
 import { Heart } from '@/lib/entity/heart';
 import { Square } from '@/lib/entity/square';
+import { Star } from '@/lib/entity/star';
 import { Utils } from '@/lib/utils';
-
-const LIGHT_POSITION: PointLike = { x: 0.5, y: -0.1 };
 
 export class Simulation {
   #entities: Entity[] = [];
@@ -22,6 +21,7 @@ export class Simulation {
   #context: CanvasRenderingContext2D | null = null;
   #controller = new AbortController();
   #timeDeltas: number[] = [];
+  #light = new Vector({ x: 0, y: -1 });
   constructor(
     eventEmitter: EventEmitter<EventId>,
     configRef: RefObject<Config>,
@@ -102,11 +102,17 @@ export class Simulation {
     }
 
     if (this.#steps === 0 && this.#entities.length === 0) {
-      for (let i = 0; i < this.#configRef.current.initialEntities; ++i)
-        this.addEntity({
+      const rect = this.#canvasRef.current.getBoundingClientRect();
+      const canvasArea = rect.width * rect.height;
+      let entityArea = 0;
+      for (let i = 0; i < this.#configRef.current.initialEntities; ++i) {
+        const entity = this.addEntity({
           x: bounds.x * Math.random(),
           y: bounds.y * Math.random(),
         });
+        entityArea += entity.mass;
+        if (entityArea > canvasArea * 0.5) return;
+      }
     }
 
     const physicsMillis = elapsedMillis / this.#configRef.current.physicsSteps;
@@ -153,7 +159,9 @@ export class Simulation {
       this.#context = context;
     }
 
-    const light = Point.mult(bounds, LIGHT_POSITION);
+    this.#light.rotateEq(this.#configRef.current.lightMotion * 0.001);
+    const light = Point.add(Point.mult(Vector.mult(this.#light, 0.5), bounds), Point.mult(bounds, 0.5));
+
     const maxLightDistance = Math.sqrt(
       Math.max(
         Point.hypot2(Point.sub(light, { x: 0, y: 0 })),
@@ -209,7 +217,7 @@ export class Simulation {
     this.#entities.splice(0, this.#entities.length);
     this.#steps = 0;
   }
-  addEntity(point: PointLike, left?: boolean) {
+  addEntity(point: PointLike, left?: boolean): Entity {
     const params: ConstructorParameters<typeof Entity> = [
       this.#configRef,
       {
@@ -234,11 +242,14 @@ export class Simulation {
           ? new Square(...params)
           : selected === EntityType.Heart
             ? new Heart(...params)
-            : null;
+            : selected === EntityType.Star
+              ? new Star(...params)
+              : null;
     if (entity === null) throw new Error(`Simulation.addEntity has no handler for EntityType ${selected}`);
 
     // don't replace this.#entities as we've given a ref to Window
     if (this.#entities.length === 100) this.#entities.splice(0, 1);
     this.#entities.push(entity);
+    return entity;
   }
 }

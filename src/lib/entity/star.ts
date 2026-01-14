@@ -5,24 +5,22 @@ import { Entity } from '@/lib/entity/base';
 import { Circle } from '@/lib/entity/circle';
 import { Utils } from '@/lib/utils';
 
-export class Heart extends Entity {
+export class Star extends Entity {
   #mass = 0;
   #pointsPosition: PointLike | null = null;
   #points: PointLike[] | null = null;
   #aabb: AABB | null = null;
   #shape: VectorLike[] = [
-    { x: 0, y: -0.66 },
-    { x: 0.33, y: -1 },
-    { x: 0.66, y: -1 },
-    { x: 1, y: -0.66 },
-    { x: 1, y: 0 },
-    { x: 0.66, y: 0.66 },
-    { x: 0, y: 1 },
-    { x: -0.66, y: 0.66 },
-    { x: -1, y: 0 },
-    { x: -1, y: -0.66 },
-    { x: -0.66, y: -1 },
-    { x: -0.33, y: -1 },
+    { x: 0.22, y: -0.31 },
+    { x: 0.95, y: -0.31 },
+    { x: 0.36, y: 0.12 },
+    { x: 0.59, y: 0.81 },
+    { x: 0, y: 0.38 },
+    { x: -0.59, y: 0.81 },
+    { x: -0.36, y: 0.12 },
+    { x: -0.95, y: -0.31 },
+    { x: -0.22, y: -0.31 },
+    { x: 0, y: -1 },
   ];
   constructor(...params: ConstructorParameters<typeof Entity>) {
     super(...params);
@@ -96,16 +94,13 @@ export class Heart extends Entity {
 
       context.beginPath();
       context.moveTo(this.points[0].x, this.points[0].y);
-      // const typedWindow = window as typeof window & { radii: number[] };
-      // if (!('radii' in window)) typedWindow.radii = [0, 0.5, 0.4, 0.7, 1, 1, 0.5, 1, 1, 0.7, 0.4, 0.5];
-      const radii = [0, 0.5, 0.4, 0.7, 1, 1, 0.5, 1, 1, 0.7, 0.4, 0.5];
-      for (let p = 1; p <= this.points.length; p += 1) {
-        const p0 = this.points[p - 1];
-        const p1 = this.points[p % this.points.length];
-        // const radius = typedWindow.radii[p - 1];
-        const radius = radii[p - 1];
-        context.arcTo(p0.x, p0.y, p1.x, p1.y, this.radius * radius);
-        // context.lineTo(p1.x, p1.y);
+      for (let p = 2; p <= this.points.length + 1; p += 2) {
+        const p0 = this.points[p - 2];
+        const p1 = this.points[(p - 1) % this.points.length];
+        const p2 = this.points[p % this.points.length];
+        context.lineTo(p0.x, p0.y);
+        context.arcTo(p1.x, p1.y, p2.x, p2.y, this.radius * 0.03);
+        context.lineTo(p2.x, p2.y);
       }
       context.closePath();
 
@@ -148,14 +143,6 @@ export class Heart extends Entity {
         context.fillStyle = gradient;
         context.fill();
       }
-
-      // if (context.shadowBlur) context.shadowBlur = 0;
-      // context.fillStyle = '#f0f';
-      // for (const point of this.points) {
-      //   context.beginPath();
-      //   context.arc(point.x, point.y, 2, 0, Math.PI * 2);
-      //   context.fill();
-      // }
     }
 
     if (context.shadowBlur) context.shadowBlur = 0;

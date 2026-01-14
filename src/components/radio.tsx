@@ -27,7 +27,7 @@ function RadioSwitchOption({
     else if (checked) onValueChange(option.value);
   }, [onValueChange, option, multi, value, multiFallback]);
 
-  return <Switch label={option.label} value={!!(value & option.value)} onValueChange={handleChange} role='radio' />;
+  return <Switch label={option.label} value={multi ? !!(value & option.value) : value === option.value} onValueChange={handleChange} role='radio' />;
 }
 
 /** array of switches with radiogroup/radio role */
