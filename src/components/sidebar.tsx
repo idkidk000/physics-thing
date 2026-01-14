@@ -1,24 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/button';
-import { RadioSlider } from '@/components/radio';
+import { type RadioOption, RadioSlider, RadioSwitch } from '@/components/radio';
 import { Range, RangeTwo } from '@/components/range';
 import { Switch } from '@/components/switch';
 import { VectorPicker } from '@/components/vector-picker';
 import { EntityType, ShadingType, useConfig } from '@/hooks/config';
 import { HotKeys, useEvent } from '@/hooks/event';
-import type { VectorLike } from '@/lib/2d';
+import type { VectorLike } from '@/lib/2d/core';
+import { Utils } from '@/lib/utils';
 
-const shadingOptions = [
-  { label: 'Flat', value: ShadingType.Flat },
-  { label: 'Two tone', value: ShadingType.TwoTone },
-  { label: 'Gradient', value: ShadingType.Gradient },
-];
-
-const entityOptions = [
-  { label: 'Circle', value: EntityType.Circle },
-  { label: 'Both', value: EntityType.Both },
-  { label: 'Square', value: EntityType.Square },
-];
+const shadingOptions: RadioOption[] = Utils.enumEntries(ShadingType).map(([key, value]) => ({ label: Utils.pascalToSentenceCase(key), value }));
+const entityOptions: RadioOption[] = Utils.enumEntries(EntityType).map(([key, value]) => ({ label: Utils.pascalToSentenceCase(key), value }));
 
 export function Sidebar() {
   const { config, setConfig } = useConfig();
@@ -154,9 +146,14 @@ export function Sidebar() {
           <Range min={0} max={180} label='Hue range' value={config.hueRange} onValueChange={handleHueRangeChange} />
 
           <RangeTwo min={1} max={200} label='Radius' valueMin={config.radiusMin} valueMax={config.radiusMax} onValueChange={handleRadiusChange} />
-          <RadioSlider options={shadingOptions} value={config.shadingType} onValueChange={handleShadingChange} />
-          <RadioSlider options={entityOptions} value={config.entityType} onValueChange={handleEntityTypeChange} />
 
+          <hr />
+
+          <RadioSwitch options={entityOptions} value={config.entityType} onValueChange={handleEntityTypeChange} multi multiFallback={EntityType.Circle} />
+
+          <hr />
+
+          <RadioSlider options={shadingOptions} value={config.shadingType} onValueChange={handleShadingChange} />
           <div className='flex gap-2 justify-between'>
             <Switch label='Draw blur' value={config.drawBlur} onValueChange={handleDrawBlurChange} />
             <Switch label='Click to spawn' value={config.clickSpawn} onValueChange={handleClickSpawnChange} />

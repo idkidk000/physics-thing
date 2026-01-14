@@ -1,6 +1,6 @@
 import { createContext, type Dispatch, type ReactNode, type RefObject, type SetStateAction, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useEvent } from '@/hooks/event';
-import type { VectorLike } from '@/lib/2d';
+import type { VectorLike } from '@/lib/2d/core';
 
 export enum ShadingType {
   Flat,
@@ -8,10 +8,11 @@ export enum ShadingType {
   Gradient,
 }
 
+/** bits */
 export enum EntityType {
-  Circle,
-  Both,
-  Square,
+  Circle = 1,
+  Square = 2,
+  Heart = 4,
 }
 
 export interface Config {
@@ -31,7 +32,8 @@ export interface Config {
   shadingType: ShadingType;
   initialEntities: number;
   clickSpawn: boolean;
-  entityType: EntityType;
+  /** bitfield of `EntityType` */
+  entityType: number;
   minImpulse: number;
   collideRotationalVelocityRatio: number;
   rotationalVelocityRatio: number;
@@ -56,7 +58,7 @@ export const defaultConfig: Config = {
   shadingType: ShadingType.TwoTone,
   initialEntities: 20,
   clickSpawn: false,
-  entityType: EntityType.Both,
+  entityType: EntityType.Circle | EntityType.Square | EntityType.Heart,
   minImpulse: 10,
   collideRotationalVelocityRatio: 0.99,
   rotationalVelocityRatio: 0.998,

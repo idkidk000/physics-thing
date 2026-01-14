@@ -2,10 +2,11 @@ import type { RefObject } from 'react';
 import { type MouseState, MouseStateEvent } from '@/hooks/canvas';
 import { type Config, EntityType } from '@/hooks/config';
 import type { EventEmitter, EventId } from '@/hooks/event';
-import { Point, type PointLike, Vector } from '@/lib/2d';
-import { Circle } from '@/lib/circle';
-import type { Entity } from '@/lib/entity';
-import { Square } from '@/lib/square';
+import { Point, type PointLike, Vector } from '@/lib/2d/core';
+import type { Entity } from '@/lib/entity/base';
+import { Circle } from '@/lib/entity/circle';
+import { Heart } from '@/lib/entity/heart';
+import { Square } from '@/lib/entity/square';
 import { Utils } from '@/lib/utils';
 
 const LIGHT_POSITION: PointLike = { x: 0.5, y: -0.1 };
@@ -72,15 +73,17 @@ export class Simulation {
 
     if (this.#mouseRef.current.event === MouseStateEvent.End) {
       if (this.#activeEntity) {
-        if (canvasMouse.x <= 1 || canvasMouse.y <= 1 || canvasMouse.x >= bounds.x - 1 || canvasMouse.y >= bounds.y - 1)
-          this.#entities = this.#entities.filter((item) => item !== this.#activeEntity);
+        if (canvasMouse.x <= 1 || canvasMouse.y <= 1 || canvasMouse.x >= bounds.x - 1 || canvasMouse.y >= bounds.y - 1) {
+          const ix = this.#entities.indexOf(this.#activeEntity);
+          this.#entities.splice(ix, 1);
+        }
         this.#activeEntity.dragging = false;
         this.#activeEntity = null;
       }
       this.#mouseRef.current.event = MouseStateEvent.None;
     } else if (this.#mouseRef.current.event === MouseStateEvent.Start) {
       if (!this.#activeEntity) {
-        this.#activeEntity = this.#entities.find((item) => item.age > 20 && item.position.hypot2(canvasMouse) < item.radius ** 2) ?? null;
+        this.#activeEntity = this.findEntity(this.#mouseRef.current) ?? null;
         if (this.#activeEntity) this.#activeEntity.dragging = true;
       }
       this.#mouseRef.current.event = MouseStateEvent.None;
@@ -132,7 +135,7 @@ export class Simulation {
     }
 
     if (this.#deleteIxs.size) {
-      this.#entities = this.#entities.filter((_, i) => !this.#deleteIxs.has(i));
+      for (const ix of [...this.#deleteIxs].toSorted((a, b) => b - a)) this.#entities.splice(ix, 1);
       this.#deleteIxs.clear();
     }
 
@@ -198,12 +201,12 @@ export class Simulation {
     if (this.#activeEntity) this.#activeEntity.dragging = false;
     this.#activeEntity = item;
   }
-  findObject(point: PointLike, minAge = 20) {
-    return this.#entities.find((item) => item.age >= minAge && item.position.hypot2(point) < item.radius ** 2);
+  findEntity(point: PointLike, minAge = 20) {
+    return this.#entities.toReversed().find((item) => item.age >= minAge && item.contains(point));
   }
   reset() {
     this.#activeEntity = null;
-    this.#entities = [];
+    this.#entities.splice(0, this.#entities.length);
     this.#steps = 0;
   }
   addEntity(point: PointLike, left?: boolean) {
@@ -220,11 +223,22 @@ export class Simulation {
         }),
       },
     ];
+    const options = Utils.enumEntries(EntityType)
+      .map(([, value]) => value)
+      .filter((value) => value & this.#configRef.current.entityType);
+    const selected = options[Math.floor(Math.random() * options.length - 0.00001)];
     const entity =
-      this.#configRef.current.entityType === EntityType.Circle || (this.#configRef.current.entityType === EntityType.Both && Math.random() > 0.5)
+      selected === EntityType.Circle
         ? new Circle(...params)
-        : new Square(...params);
-    if (this.#entities.length === 100) this.#entities = [...this.entities.slice(-99), entity];
-    else this.#entities.push(entity);
+        : selected === EntityType.Square
+          ? new Square(...params)
+          : selected === EntityType.Heart
+            ? new Heart(...params)
+            : null;
+    if (entity === null) throw new Error(`Simulation.addEntity has no handler for EntityType ${selected}`);
+
+    // don't replace this.#entities as we've given a ref to Window
+    if (this.#entities.length === 100) this.#entities.splice(0, 1);
+    this.#entities.push(entity);
   }
 }

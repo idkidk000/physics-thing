@@ -1,8 +1,5 @@
 import { type CSSProperties, type MouseEvent, type TouchEvent, useCallback, useEffect, useId, useMemo, useRef } from 'react';
-import { Point, type PointLike, Vector, type VectorLike } from '@/lib/2d';
-
-const DEVICE_Y_OFFSET_DEG = -45;
-const DEVICE_XY_CLAMP_DEG = 22.5;
+import { Point, type PointLike, Vector, type VectorLike } from '@/lib/2d/core';
 
 export function VectorPicker({
   value,
@@ -11,6 +8,7 @@ export function VectorPicker({
   label,
   digits = 2,
   updateMillis = 300,
+  deviceXyClamp = 22.5,
 }: {
   value: VectorLike;
   onValueChange: (value: VectorLike) => void;
@@ -18,6 +16,7 @@ export function VectorPicker({
   label: string;
   digits?: number;
   updateMillis?: number;
+  deviceXyClamp?: number;
 }) {
   const id = useId();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -26,6 +25,7 @@ export function VectorPicker({
   const spanVecRef = useRef<HTMLSpanElement>(null);
   const spanDegRef = useRef<HTMLSpanElement>(null);
   const timeoutRef = useRef<number | null>(null);
+  const deviceOffsetRef = useRef<VectorLike | null>(null);
 
   // biome-ignore format: no
   const updateControl = useCallback((vec: VectorLike) => {
@@ -37,10 +37,14 @@ export function VectorPicker({
     dragRef.current.style.left = `${position.x}px`;
     dragRef.current.style.top = `${position.y}px`;
     spanVecRef.current.innerText = `{ x: ${vec.x.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}, y: ${vec.y.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })} }`;
-    spanDegRef.current.innerText = `${Math.round(Vector.toDegrees(vec))}°, strength: ${Vector.hypot(vec).toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+    const hypot = Vector.hypot(vec)
+    spanDegRef.current.innerText = `${hypot===0 ? 0 : Math.round(Vector.toDegrees(vec))}°, strength: ${hypot.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
   }, [range, digits]);
 
-  useEffect(() => updateControl(value), [value, updateControl]);
+  useEffect(() => {
+    if (!Vector.eq(deferredValueRef.current, value)) deferredValueRef.current = { ...value };
+    updateControl(value);
+  }, [value, updateControl]);
 
   const sendDeferredValue = useCallback(() => {
     if (timeoutRef.current) {
@@ -59,9 +63,13 @@ export function VectorPicker({
     window.addEventListener('deviceorientation', (event) => {
       const { beta, gamma } = event;
       if (beta === null || gamma === null) return;
-      const raw: VectorLike = { x: gamma, y: beta +DEVICE_Y_OFFSET_DEG };
+      if (deviceOffsetRef.current === null) {
+        deviceOffsetRef.current = { x: gamma, y: beta };
+        return;
+      }
+      const raw = Vector.sub({ x: gamma, y: beta }, deviceOffsetRef.current);
       const hypot = Vector.hypot(raw);
-      const scaled = Vector.roundTo(Vector.mult(Vector.div(raw, Math.max(DEVICE_XY_CLAMP_DEG, hypot)), range),digits);
+      const scaled = Vector.roundTo(Vector.mult(Vector.div(raw, Math.max(deviceXyClamp, hypot)), range), digits);
       const min = (10 ** -digits)*5
       if (Math.abs(scaled.x) <= min) scaled.x = 0;
       if (Math.abs(scaled.y) <= min) scaled.y = 0;
@@ -71,7 +79,7 @@ export function VectorPicker({
     }, { signal: controller.signal });
 
     return () => controller.abort();
-  }, [range, sendDeferredValue, updateControl, updateMillis, digits]);
+  }, [range, sendDeferredValue, updateControl, updateMillis, digits, deviceXyClamp]);
 
   // biome-ignore format: no
   const updateDeferredValue = useCallback((pointer: { clientX: number; clientY: number }) => {

@@ -69,4 +69,13 @@
       @apply slider-track;
     }
   }
+
+  .range {
+    & > label {
+      @apply w-36;
+    }
+    & > span {
+      @apply w-12;
+    }
+  }
 }

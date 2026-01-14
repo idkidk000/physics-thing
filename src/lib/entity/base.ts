@@ -1,19 +1,12 @@
 import type { RefObject } from 'react';
 import type { Config } from '@/hooks/config';
-import { type AABB, Point, type PointLike, Vector, type VectorLike } from '@/lib/2d';
-
-export enum Hull {
-  Circle,
-  Square,
-}
+import { type AABB, Point, type PointLike, Vector, type VectorLike } from '@/lib/2d/core';
 
 export abstract class Entity {
   #radius;
   #radius2;
-
   #age: number;
   #dragging: boolean;
-  // TODO: currently unhandled
   #fixed: boolean;
   #hue: number;
   #opacity: number;
@@ -145,6 +138,8 @@ export abstract class Entity {
   abstract get aabb(): AABB;
   abstract get points(): PointLike[];
   abstract intersects(other: Entity): boolean;
+  abstract draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void;
+  abstract contains(point: PointLike): boolean;
 
   collide(other: Entity): void {
     if (!this.intersects(other)) return;
@@ -166,8 +161,8 @@ export abstract class Entity {
     this.velocity.subEq(Vector.div(impulseVector, this.mass)).multEq(this.configRef.current.collideVelocityRatio);
     other.velocity.addEq(Vector.div(impulseVector, other.mass)).multEq(this.configRef.current.collideVelocityRatio);
 
-    if (other.fixed) this.position.subEq(collisionNormal);
-    if (this.fixed) other.position.addEq(collisionNormal);
+    if (other.fixed && !this.fixed) this.position.subEq(collisionNormal);
+    if (this.fixed && !other.fixed) other.position.addEq(collisionNormal);
 
     // TODO: doing this properly requires the vector to the collision point
     if (Vector.hypot2(velocityVector) > this.configRef.current.minCollisionVelocityToImpartRotationalVelocity ** 2) {
@@ -207,7 +202,6 @@ export abstract class Entity {
     this.velocity.multEq(config.stepVelocityRatio);
     this.rotationalVelocity *= config.rotationalVelocityRatio * (hit ? config.collideRotationalVelocityRatio : 1);
   }
-  abstract draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void;
   drawDebug(context: CanvasRenderingContext2D) {
     context.strokeStyle = '#0f0';
     context.strokeRect(this.aabb.min.x, this.aabb.min.y, this.aabb.max.x - this.aabb.min.x, this.aabb.max.y - this.aabb.min.y);

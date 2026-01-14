@@ -1,10 +1,10 @@
 import { ShadingType } from '@/hooks/config';
-import { type AABB, circleIntersectsPoly, Point, type PointLike, polyIntersectsPoly, Vector } from '@/lib/2d';
-import { Circle } from '@/lib/circle';
-import { Entity } from '@/lib/entity';
+import { type AABB, Point, type PointLike, Vector } from '@/lib/2d/core';
+import { circleIntersectsPoly, pointInPoly, polyIntersectsPoly } from '@/lib/2d/helpers';
+import { Entity } from '@/lib/entity/base';
+import { Circle } from '@/lib/entity/circle';
 import { Utils } from '@/lib/utils';
 
-/** radius is origin to middle of a side, not corner */
 export class Square extends Entity {
   #mass = 0;
   #pointsPosition: PointLike | null = null;
@@ -34,9 +34,8 @@ export class Square extends Entity {
   }
   get aabb(): AABB {
     if (!this.#aabb || !this.#pointsPosition || !Point.eq(this.#pointsPosition, this.position)) {
-      const points = this.points;
       let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
-      for (const point of points) {
+      for (const point of this.points) {
         minX = Math.min(minX, point.x);
         minY = Math.min(minY, point.y);
         maxX = Math.max(maxX, point.x);
@@ -64,19 +63,8 @@ export class Square extends Entity {
   intersects(other: Entity): boolean {
     if (this.aabb.min.x > other.aabb.max.x || this.aabb.max.x < other.aabb.min.x || this.aabb.min.y > other.aabb.max.y || this.aabb.max.y < other.aabb.min.y)
       return false;
-    if (this instanceof Circle && other instanceof Circle) {
-      return Vector.hypot2(Vector.sub(other.position, this.position)) < (this.radius + other.radius) ** 2;
-    }
-    if (this instanceof Circle && other instanceof Square) {
-      return circleIntersectsPoly(this, other);
-    }
-    if (this instanceof Square && other instanceof Circle) {
-      return circleIntersectsPoly(other, this);
-    }
-    if (this instanceof Square && other instanceof Square) {
-      return polyIntersectsPoly(this, other);
-    }
-    throw new Error(`cannot test intersection between ${this.constructor.name} and ${other.constructor.name}`);
+    if (other instanceof Circle) return circleIntersectsPoly(other, this);
+    return polyIntersectsPoly(this, other);
   }
   draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void {
     const config = this.configRef.current;
@@ -160,5 +148,8 @@ export class Square extends Entity {
     }
 
     if (context.shadowBlur) context.shadowBlur = 0;
+  }
+  contains(point: PointLike): boolean {
+    return this.aabb.min.x <= point.x && this.aabb.max.x >= point.x && this.aabb.min.y <= point.y && this.aabb.max.y >= point.y && pointInPoly(point, this);
   }
 }

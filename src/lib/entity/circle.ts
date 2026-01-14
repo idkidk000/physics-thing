@@ -1,7 +1,7 @@
 import { ShadingType } from '@/hooks/config';
-import { type AABB, circleIntersectsPoly, Point, type PointLike, polyIntersectsPoly, Vector } from '@/lib/2d';
-import { Entity } from '@/lib/entity';
-import { Square } from '@/lib/square';
+import { type AABB, Point, type PointLike } from '@/lib/2d/core';
+import { circleIntersectsCircle, circleIntersectsPoly, pointInCircle } from '@/lib/2d/helpers';
+import { Entity } from '@/lib/entity/base';
 import { Utils } from '@/lib/utils';
 
 export class Circle extends Entity {
@@ -38,19 +38,8 @@ export class Circle extends Entity {
   intersects(other: Entity): boolean {
     if (this.aabb.min.x > other.aabb.max.x || this.aabb.max.x < other.aabb.min.x || this.aabb.min.y > other.aabb.max.y || this.aabb.max.y < other.aabb.min.y)
       return false;
-    if (this instanceof Circle && other instanceof Circle) {
-      return Vector.hypot2(Vector.sub(other.position, this.position)) < (this.radius + other.radius) ** 2;
-    }
-    if (this instanceof Circle && other instanceof Square) {
-      return circleIntersectsPoly(this, other);
-    }
-    if (this instanceof Square && other instanceof Circle) {
-      return circleIntersectsPoly(other, this);
-    }
-    if (this instanceof Square && other instanceof Square) {
-      return polyIntersectsPoly(this, other);
-    }
-    throw new Error(`cannot test intersection between ${this.constructor.name} and ${other.constructor.name}`);
+    if (other instanceof Circle) return circleIntersectsCircle(this, other);
+    return circleIntersectsPoly(this, other);
   }
   draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void {
     const config = this.configRef.current;
@@ -98,5 +87,8 @@ export class Circle extends Entity {
     }
 
     if (context.shadowBlur) context.shadowBlur = 0;
+  }
+  contains(point: PointLike): boolean {
+    return pointInCircle(point, this);
   }
 }

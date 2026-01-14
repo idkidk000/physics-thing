@@ -22,5 +22,5 @@
     "types": ["node"],
     "verbatimModuleSyntax": true
   },
-  "include": ["vite.config.ts", "scripts/*", "src/lib/2d.ts"]
+  "include": ["vite.config.ts", "scripts/*", "src/lib/2d/core.ts"]
 }

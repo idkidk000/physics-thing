@@ -9,6 +9,28 @@ export interface PointLike extends PointOrVectorLike {}
 
 export interface VectorLike extends PointOrVectorLike {}
 
+export interface LineLike {
+  a: PointLike;
+  b: PointLike;
+}
+
+export interface AABB {
+  min: PointLike;
+  max: PointLike;
+}
+
+export interface CircleLike {
+  position: Point;
+  radius: number;
+  radius2: number;
+}
+
+export interface PolyLike {
+  position: Point;
+  aabb: AABB;
+  points: PointLike[];
+}
+
 abstract class PointOrVector<Interface extends PointOrVectorLike> {
   x: number;
   y: number;
@@ -237,11 +259,6 @@ export class Vector extends PointOrVector<VectorLike> {
   }
 }
 
-export interface LineLike {
-  a: PointLike;
-  b: PointLike;
-}
-
 export class Line {
   a: PointLike;
   b: PointLike;
@@ -293,63 +310,4 @@ export class Line {
   static is(item: unknown): item is Line {
     return typeof item === 'object' && item !== null && 'a' in item && 'b' in item && PointOrVector.is(item.a) && PointOrVector.is(item.b);
   }
-}
-
-export interface AABB {
-  min: PointLike;
-  max: PointLike;
-}
-
-export interface CircleLike {
-  position: Point;
-  radius: number;
-  radius2: number;
-}
-
-export interface PolyLike {
-  radius2: number;
-  radius: number;
-  position: Point;
-  aabb: AABB;
-  points: PointLike[];
-}
-
-export function circleIntersectsPoly(circle: CircleLike, poly: PolyLike): boolean {
-  // clamping circle.position to poly's aabb is from here https://stackoverflow.com/a/1879223
-  /** closest point to circle in poly's aabb (not necessarily inside poly's bb or even different from circle.position) */
-  const ptOtherAabbClosest = Point.clamp(circle.position, poly.aabb.min, poly.aabb.max);
-  const vecOtherAabbClosest = Vector.sub(Point.eq(circle.position, ptOtherAabbClosest) ? poly.position : ptOtherAabbClosest, circle.position);
-
-  // test for poly's corners inside circle's radius
-  const polyPoints = poly.points;
-  for (const polyPoint of polyPoints) {
-    const inside = Vector.hypot2(Vector.sub(polyPoint, circle.position)) < circle.radius2;
-    if (inside) return true;
-  }
-
-  /** closest point to poly's aabb on circle's circumference */
-  const ptThisClosest = Point.add(circle.position, Vector.mult(Vector.unit(vecOtherAabbClosest), circle.radius));
-  const lineToClosest: LineLike = { a: circle.position, b: ptThisClosest };
-
-  // test for line from circle.position to ptThisClosest intersecting any line of poly
-  for (let p = 1; p <= polyPoints.length; ++p) {
-    const intersection = Line.intersection(lineToClosest, { a: polyPoints[p - 1], b: polyPoints[p % polyPoints.length] });
-    if (intersection) return true;
-  }
-
-  return false;
-}
-
-export function polyIntersectsPoly(a: PolyLike, b: PolyLike): boolean {
-  const aPoints = a.points;
-  const bPoints = b.points;
-
-  for (let ap = 1; ap <= aPoints.length; ++ap) {
-    const aLine: LineLike = { a: aPoints[ap - 1], b: aPoints[ap % aPoints.length] };
-    for (let bp = 1; bp <= bPoints.length; ++bp) {
-      if (Line.intersection(aLine, { a: bPoints[bp - 1], b: bPoints[bp % bPoints.length] })) return true;
-    }
-  }
-
-  return false;
 }

@@ -3,18 +3,31 @@ import { Button } from '@/components/button';
 import { Switch } from '@/components/switch';
 import { Utils } from '@/lib/utils';
 
-interface Option {
+export interface RadioOption {
   value: number;
   label: string;
 }
 
-function RadioSwitchOption({ option, value, onValueChange }: { option: Option; value: number; onValueChange: (value: number) => void }) {
+function RadioSwitchOption({
+  option,
+  value,
+  onValueChange,
+  multi,
+  multiFallback,
+}: {
+  option: RadioOption;
+  value: number;
+  onValueChange: (value: number) => void;
+  multi: boolean;
+  multiFallback: number;
+}) {
   // biome-ignore format: no
   const handleChange = useCallback((checked: boolean) => {
-    if (checked) onValueChange(option.value);
-  }, [onValueChange, option.value]);
+    if (multi) onValueChange((checked ? value | option.value : value ^ option.value) || multiFallback);
+    else if (checked) onValueChange(option.value);
+  }, [onValueChange, option, multi, value, multiFallback]);
 
-  return <Switch label={option.label} value={value === option.value} onValueChange={handleChange} role='radio' />;
+  return <Switch label={option.label} value={!!(value & option.value)} onValueChange={handleChange} role='radio' />;
 }
 
 /** array of switches with radiogroup/radio role */
@@ -23,29 +36,35 @@ export function RadioSwitch({
   onValueChange,
   label,
   options,
+  multi = false,
+  multiFallback = 0,
 }: {
   value: number;
   onValueChange: (value: number) => void;
-  label: string;
-  options: Option[];
+  label?: string;
+  options: RadioOption[];
+  multi?: boolean;
+  multiFallback?: number;
 }) {
   const id = useId();
 
   return (
     <div className='flex flex-col gap-2'>
-      <label htmlFor={id} className='inline-flex'>
-        {label}
-      </label>
+      {label && (
+        <label htmlFor={id} className='inline-flex'>
+          {label}
+        </label>
+      )}
       <div className='flex flex-row gap-4 items-center justify-between' role='radiogroup' id={id}>
         {options.map((option) => (
-          <RadioSwitchOption key={option.value} option={option} value={value} onValueChange={onValueChange} />
+          <RadioSwitchOption key={option.value} option={option} value={value} onValueChange={onValueChange} multi={multi} multiFallback={multiFallback} />
         ))}
       </div>
     </div>
   );
 }
 
-function RadioSliderOption({ option, onValueChange }: { option: Option; onValueChange: (value: number) => void }) {
+function RadioSliderOption({ option, onValueChange }: { option: RadioOption; onValueChange: (value: number) => void }) {
   const handleClick = useCallback(() => onValueChange(option.value), [onValueChange, option.value]);
 
   return (
@@ -65,7 +84,7 @@ export function RadioSlider({
   value: number;
   onValueChange: (value: number) => void;
   label?: string;
-  options: Option[];
+  options: RadioOption[];
 }) {
   const id = useId();
   const valueRef = useRef(value);

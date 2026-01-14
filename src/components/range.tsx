@@ -26,12 +26,10 @@ export function Range({
   const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => onValueChange(event.target.valueAsNumber), [onValueChange]);
 
   return (
-    <div className='flex flex-row gap-2 items-center flex-wrap justify-center'>
-      <label htmlFor={id} className='grow basis-16'>
-        {label}
-      </label>
+    <div className='flex flex-row gap-2 items-center flex-wrap justify-center range'>
+      <label htmlFor={id}>{label}</label>
       <input id={id} type='range' min={min} max={max} step={step} value={value} onChange={handleChange} />
-      <span className='grow basis-0'>{`${value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${unit}`}</span>
+      <span>{`${value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${unit}`}</span>
     </div>
   );
 }
@@ -73,7 +71,6 @@ export function RangeTwo({
     if (!trackElemRef.current || !valueMinElemRef.current || !valueMaxElemRef.current || !spanElemRef.current) return;
     const minPercent = `${(100 * (valueMin - min)) / (max - min)}%`;
     const maxPercent = `${(100 * (valueMax - min)) / (max - min)}%`;
-    // console.debug('RangeTwo updateControl', { valueMin, valueMax }, { minPercent, maxPercent });
     trackElemRef.current.style.background = `border-box linear-gradient(to right, transparent ${minPercent}, var(--color-accent) ${minPercent}, var(--color-accent) ${maxPercent}, transparent ${maxPercent}) no-repeat`;
     valueMinElemRef.current.style.left = minPercent;
     valueMaxElemRef.current.style.left = maxPercent;
@@ -155,10 +152,8 @@ export function RangeTwo({
   );
 
   return (
-    <div className='flex flex-row gap-2 items-center flex-wrap justify-center'>
-      <label htmlFor={id} className='grow basis-16'>
-        {label}
-      </label>
+    <div className='flex flex-row gap-2 items-center flex-wrap justify-center range'>
+      <label htmlFor={id}>{label}</label>
       <div
         className='slider-track relative w-45 group touch-none bg-transparent'
         id={id}
@@ -189,7 +184,7 @@ export function RangeTwo({
           ref={valueMaxElemRef}
         />
       </div>
-      <span className='grow basis-0 flex flex-col' ref={spanElemRef}>
+      <span className='flex flex-col' ref={spanElemRef}>
         <span />
         <span />
       </span>
