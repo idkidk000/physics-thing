@@ -4,17 +4,41 @@
   color-scheme: light dark;
 }
 
+/* used by `slider-track`, set by component */
+@property --percent-from {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
+/* used by `slider-track`, set by component */
+@property --percent-to {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
+/* used by `--color-accent`, set by `hooks/config.ts` */
+@property --hue-center {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
 @theme inline {
   --color-foreground: light-dark(var(--color-gray-950), var(--color-gray-50));
   --color-background: light-dark(var(--color-gray-50), var(--color-gray-950));
-  /* --hue-center is set by hooks/config on config change. lch gives more consistent perceived brightness but it changes the hue */
-  --color-accent: light-dark(hsl(var(--hue-center) 100 35), hsl(var(--hue-center) 100 45));
+  /* --hue-center is set by hooks/config on config change. lch gives more consistent perceived brightness but it changes the hue significantly */
+  /* --color-accent: light-dark(hsl(var(--hue-center) 100 35), hsl(var(--hue-center) 100 45)); */
+  --color-accent: light-dark(lch(35% 100% var(--hue-center)), lch(45% 100% var(--hue-center)));
   --color-utility: light-dark(var(--color-gray-700), var(--color-gray-300));
 
   --color-border: hsl(from var(--color-utility) h s l / 30%);
   --color-button: hsl(from var(--color-utility) h s l / 5%);
   --color-button-hover: hsl(from var(--color-utility) h s l / 15%);
   --color-button-active: hsl(from var(--color-utility) h s l / 25%);
+
+  --color-danger: light-dark(var(--color-rose-400), var(--color-rose-600));
 }
 
 @utility pixel {
@@ -26,7 +50,24 @@
 }
 
 @utility slider-track {
-  @apply appearance-none box-border h-4 rounded-full border-2 border-border bg-accent cursor-pointer m-0;
+  @apply appearance-none box-border h-4 rounded-full border-2 border-border cursor-pointer m-0;
+  background: border-box
+    linear-gradient(
+      to right,
+      transparent var(--percent-from),
+      var(--color-accent) var(--percent-from),
+      var(--color-accent) var(--percent-to),
+      transparent var(--percent-to)
+    )
+    no-repeat;
+}
+
+@utility dark {
+  color-scheme: dark;
+}
+
+@utility light {
+  color-scheme: light;
 }
 
 @layer base {

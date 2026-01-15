@@ -88,6 +88,7 @@ export class Simulation {
       }
       this.#mouseRef.current.event = MouseStateEvent.None;
     }
+
     if (this.#activeEntity) {
       const { x, y } = this.#activeEntity.position;
       this.#activeEntity.position.x = canvasMouse.x;
@@ -95,10 +96,7 @@ export class Simulation {
       const velocity = this.#activeEntity.position.sub({ x, y }).divEq(elapsedMillis);
       this.#activeEntity.velocity.addEq(velocity.multEq(this.#configRef.current.dragVelocity));
     } else if (this.#configRef.current.clickSpawn && this.#mouseRef.current.buttons) {
-      const left = this.#mouseRef.current.buttons & 0x1;
-      const right = this.#mouseRef.current.buttons & 0x2;
-      const direction = left && right ? undefined : left > 0;
-      this.addEntity(canvasMouse, direction);
+      this.addEntity(canvasMouse);
     }
 
     if (this.#steps === 0 && this.#entities.length === 0) {
@@ -115,6 +113,10 @@ export class Simulation {
       }
     }
 
+    if (this.#configRef.current.showDebug) for (const entity of this.#entities) entity.clearDebug();
+
+    this.#light.rotateEq(this.#configRef.current.lightMotion * elapsedMillis * 0.0001);
+
     const physicsMillis = elapsedMillis / this.#configRef.current.physicsSteps;
     for (let step = 0; step < this.#configRef.current.physicsSteps; ++step) {
       for (const circle of this.#entities) circle.step(physicsMillis, bounds);
@@ -124,10 +126,10 @@ export class Simulation {
       const sorted = this.#entities.toSorted((a, b) => a.aabb.min.x - b.aabb.min.x);
       for (let i = 0; i < sorted.length; ++i) {
         const item = sorted[i];
-        const maxX = item.aabb.max.x;
         for (let o = i + 1; o < sorted.length; ++o) {
           const other = sorted[o];
-          if (other.aabb.min.x > maxX) break;
+          if (other.aabb.min.x > item.aabb.max.x) break;
+          if (other.aabb.max.x < item.aabb.min.x || other.aabb.min.y > item.aabb.max.y || other.aabb.max.y < item.aabb.min.y) continue;
           item.collide(other);
         }
       }
@@ -147,7 +149,7 @@ export class Simulation {
 
     ++this.#steps;
   }
-  draw(timeDelta: number) {
+  draw(elapsedMillis: number) {
     if (!this.#canvasRef.current) throw new Error('canvasRef is null');
     const rect = this.#canvasRef.current.getBoundingClientRect();
     const bounds = Point.round({ x: rect.width, y: rect.height });
@@ -159,7 +161,6 @@ export class Simulation {
       this.#context = context;
     }
 
-    this.#light.rotateEq(this.#configRef.current.lightMotion * 0.001);
     const light = Point.add(Point.mult(Vector.mult(this.#light, 0.5), bounds), Point.mult(bounds, 0.5));
 
     const maxLightDistance = Math.sqrt(
@@ -177,8 +178,8 @@ export class Simulation {
       this.#context.textAlign = 'right';
       this.#context.textBaseline = 'top';
       this.#context.fillStyle = '#ff0';
-      if (this.#timeDeltas.length === 100) this.#timeDeltas = [...this.#timeDeltas.slice(-99), timeDelta];
-      else this.#timeDeltas.push(timeDelta);
+      if (this.#timeDeltas.length === 100) this.#timeDeltas = [...this.#timeDeltas.slice(-99), elapsedMillis];
+      else this.#timeDeltas.push(elapsedMillis);
       const avg = this.#timeDeltas.reduce((acc, item) => acc + item) / this.#timeDeltas.length;
       this.#context.fillText(`${(1000 / avg).toFixed(1)}`, bounds.x, 0);
       this.#context.fillText(this.entities.length.toLocaleString(), bounds.x, 10);
@@ -217,7 +218,7 @@ export class Simulation {
     this.#entities.splice(0, this.#entities.length);
     this.#steps = 0;
   }
-  addEntity(point: PointLike, left?: boolean): Entity {
+  addEntity(point: PointLike): Entity {
     const params: ConstructorParameters<typeof Entity> = [
       this.#configRef,
       {
@@ -226,9 +227,11 @@ export class Simulation {
         radius: Math.round(Math.random() * (this.#configRef.current.radiusMax - this.#configRef.current.radiusMin) + this.#configRef.current.radiusMin),
         rotationalVelocity: Math.random() * 2 - 1,
         velocity: new Vector({
-          x: left ? -1 : left === false ? 1 : Math.round(Math.random()) * 2 - 1,
-          y: Math.random() - 2,
-        }),
+          x: Math.random() - 0.5,
+          y: Math.random() - 0.5,
+        })
+          .unitEq()
+          .multEq(2),
       },
     ];
     const options = Utils.enumEntries(EntityType)

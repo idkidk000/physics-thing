@@ -22,24 +22,35 @@ interface Event {
   label: string;
   id: string;
   hidden?: true;
+  accent?: true;
 }
 
-export const events = [
-  { id: 'reset', keyName: 'r', label: 'Reset simulation' },
-  { id: 'dump', keyName: 'd', label: 'Dump to console' },
-  { id: 'fullscreen', keyName: 'f', label: 'Toggle fullscreen' },
-  { id: 'grow', keyName: 'g', label: 'Grow' },
-  { id: 'pause', keyName: 'p', label: 'Toggle paused' },
-  { id: 'reload', keyName: 'l', label: 'Reload renderer' },
-  { id: 'defaults', keyName: 'c', label: 'Reset config' },
-  { id: 'step', keyName: 's', label: 'Single step' },
-  { id: 'fixed', keyName: 'i', label: 'Toggle fixed' },
-  { id: 'showDebug', keyName: 'e', label: 'Toggle debug' },
-  { id: 'zero', keyName: 'z', label: 'Zero rotation' },
-  { id: 'add', keyName: 'a', label: 'Add entity' },
-  { id: 'rotate', keyName: 'o', label: 'Rotate' },
-  { id: 'menu', keyName: 'm', label: 'Menu', hidden: true },
-] as const satisfies Event[];
+const eventGroups = [
+  [
+    { id: 'add', keyName: 'a', label: 'Add entity' },
+    { id: 'pause', keyName: 'p', label: 'Toggle paused' },
+    { id: 'fullscreen', keyName: 'f', label: 'Toggle fullscreen' },
+    { id: 'reset', keyName: 'r', label: 'Reset simulation', accent: true },
+  ],
+  [
+    { id: 'fixed', keyName: 'i', label: 'Toggle fixed' },
+    { id: 'grow', keyName: 'g', label: 'Grow' },
+    { id: 'rotate', keyName: 'o', label: 'Rotate' },
+    { id: 'zero', keyName: 'z', label: 'Zero rotation' },
+  ],
+  [
+    { id: 'step', keyName: 's', label: 'Single step' },
+    { id: 'dump', keyName: 'd', label: 'Dump to console' },
+    { id: 'reload', keyName: 'l', label: 'Reload renderer' },
+    { id: 'showDebug', keyName: 'e', label: 'Toggle debug' },
+  ],
+  [
+    { id: 'defaults', keyName: 'c', label: 'Reset config', accent: true },
+    { id: 'menu', keyName: 'm', label: 'Menu', hidden: true },
+  ],
+] as const satisfies Event[][];
+
+const events = eventGroups.flat();
 
 export type EventId = (typeof events)[number]['id'];
 
@@ -88,6 +99,7 @@ function HotKey({
   className,
   clickClass = 'bg-button-active',
   clickMillis = 200,
+  accent,
 }: Event & { className?: string; clickClass?: string; clickMillis?: number }) {
   const { eventRef } = useEvent();
   const ref = useRef<HTMLButtonElement>(null);
@@ -110,7 +122,7 @@ function HotKey({
   }, [id, clickClass, clickMillis]);
 
   return (
-    <Button type='button' className={className} key={id} onClick={handleClick} ref={ref}>
+    <Button type='button' className={className} key={id} onClick={handleClick} ref={ref} variant={accent ? 'accent' : undefined}>
       <kbd>{key}</kbd>
       <span>{label}</span>
     </Button>
@@ -119,12 +131,19 @@ function HotKey({
 
 export function HotKeys({ className }: { className?: string }) {
   return (
-    <>
-      {events
-        .filter((event) => !('hidden' in event))
-        .map((props) => (
-          <HotKey key={props.keyName} className={className} {...props} />
+    <div className='flex flex-col gap-4'>
+      {eventGroups
+        .filter((group) => group.some((event) => !('hidden' in event)))
+        .map((group, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: source is readonly
+          <div key={i} className='grid grid-cols-2 gap-2'>
+            {group
+              .filter((event) => !('hidden' in event))
+              .map((event) => (
+                <HotKey key={event.id} {...event} className={className} />
+              ))}
+          </div>
         ))}
-    </>
+    </div>
   );
 }

@@ -1,15 +1,14 @@
 import { ShadingType } from '@/hooks/config';
-import { type AABB, Point, type PointLike, Vector } from '@/lib/2d/core';
-import { circleIntersectsPoly, pointInPoly, polyIntersectsPoly } from '@/lib/2d/helpers';
+import { type AABBLike, Point, type PointLike, Vector } from '@/lib/2d/core';
 import { Entity } from '@/lib/entity/base';
-import { Circle } from '@/lib/entity/circle';
 import { Utils } from '@/lib/utils';
 
 export class Square extends Entity {
   #mass = 0;
+  /** invalidation key for `#points` */
   #pointsPosition: PointLike | null = null;
   #points: PointLike[] | null = null;
-  #aabb: AABB | null = null;
+  #aabb: AABBLike | null = null;
   constructor(...params: ConstructorParameters<typeof Entity>) {
     super(...params);
     this.radius = super.radius;
@@ -32,7 +31,7 @@ export class Square extends Entity {
   override get rotation(): number {
     return super.rotation;
   }
-  get aabb(): AABB {
+  get aabb(): AABBLike {
     if (!this.#aabb || !this.#pointsPosition || !Point.eq(this.#pointsPosition, this.position)) {
       let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
       for (const point of this.points) {
@@ -60,96 +59,91 @@ export class Square extends Entity {
     }
     return this.#points;
   }
-  intersects(other: Entity): boolean {
-    if (this.aabb.min.x > other.aabb.max.x || this.aabb.max.x < other.aabb.min.x || this.aabb.min.y > other.aabb.max.y || this.aabb.max.y < other.aabb.min.y)
-      return false;
-    if (other instanceof Circle) return circleIntersectsPoly(other, this);
-    return polyIntersectsPoly(this, other);
-  }
   draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void {
-    const config = this.configRef.current;
+    Square.draw(this, context, light, maxLightDistance);
+  }
+
+  static draw(item: Square, context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void {
+    const config = item.configRef.current;
     context.closePath();
     if (config.drawBlur) {
       context.shadowBlur = 25;
-      context.shadowColor = `hsl(${this.hue} 100 50 / ${this.opacity}%)`;
+      context.shadowColor = `hsl(${item.hue} 100 50 / ${item.opacity}%)`;
     }
     if (config.shadingType === ShadingType.Flat) {
-      const [start, ...points] = this.points;
+      const [start, ...points] = item.points;
       context.beginPath();
       context.moveTo(start.x, start.y);
       for (const point of points) context.lineTo(point.x, point.y);
       context.closePath();
-      context.fillStyle = `hsl(${this.hue} 100 50 / ${this.opacity}%)`;
+      context.fillStyle = `hsl(${item.hue} 100 50 / ${item.opacity}%)`;
       context.fill();
     } else {
-      const lightOffset = Point.sub(this.position, light);
+      const lightOffset = Point.sub(item.position, light);
       const lightDistance = Point.hypot(lightOffset);
       const lightDistanceRatio = lightDistance / maxLightDistance;
       const lightAngle = Vector.toRadians(lightOffset);
 
-      const top = Point.add(this.position, Vector.rotate({ x: 0, y: -this.radius }, this.cos, this.sin));
-      const topRight = Point.add(this.position, Vector.rotate({ x: this.radius, y: -this.radius }, this.cos, this.sin));
-      const right = Point.add(this.position, Vector.rotate({ x: this.radius, y: 0 }, this.cos, this.sin));
-      const bottomRight = Point.add(this.position, Vector.rotate({ x: this.radius, y: this.radius }, this.cos, this.sin));
-      const bottom = Point.add(this.position, Vector.rotate({ x: 0, y: this.radius }, this.cos, this.sin));
-      const bottomLeft = Point.add(this.position, Vector.rotate({ x: -this.radius, y: this.radius }, this.cos, this.sin));
-      const left = Point.add(this.position, Vector.rotate({ x: -this.radius, y: 0 }, this.cos, this.sin));
-      const leftTop = Point.add(this.position, Vector.rotate({ x: -this.radius, y: -this.radius }, this.cos, this.sin));
+      const top = Point.add(item.position, Vector.rotate({ x: 0, y: -item.radius }, item.cos, item.sin));
+      const topRight = Point.add(item.position, Vector.rotate({ x: item.radius, y: -item.radius }, item.cos, item.sin));
+      const right = Point.add(item.position, Vector.rotate({ x: item.radius, y: 0 }, item.cos, item.sin));
+      const bottomRight = Point.add(item.position, Vector.rotate({ x: item.radius, y: item.radius }, item.cos, item.sin));
+      const bottom = Point.add(item.position, Vector.rotate({ x: 0, y: item.radius }, item.cos, item.sin));
+      const bottomLeft = Point.add(item.position, Vector.rotate({ x: -item.radius, y: item.radius }, item.cos, item.sin));
+      const left = Point.add(item.position, Vector.rotate({ x: -item.radius, y: 0 }, item.cos, item.sin));
+      const leftTop = Point.add(item.position, Vector.rotate({ x: -item.radius, y: -item.radius }, item.cos, item.sin));
 
       context.beginPath();
       context.moveTo(top.x, top.y);
 
-      context.arcTo(topRight.x, topRight.y, right.x, right.y, this.radius * 0.2);
-      context.arcTo(bottomRight.x, bottomRight.y, bottom.x, bottom.y, this.radius * 0.2);
-      context.arcTo(bottomLeft.x, bottomLeft.y, left.x, left.y, this.radius * 0.2);
-      context.arcTo(leftTop.x, leftTop.y, top.x, top.y, this.radius * 0.2);
+      context.arcTo(topRight.x, topRight.y, right.x, right.y, item.radius * 0.2);
+      context.arcTo(bottomRight.x, bottomRight.y, bottom.x, bottom.y, item.radius * 0.2);
+      context.arcTo(bottomLeft.x, bottomLeft.y, left.x, left.y, item.radius * 0.2);
+      context.arcTo(leftTop.x, leftTop.y, top.x, top.y, item.radius * 0.2);
 
       context.closePath();
 
-      if (this.configRef.current.shadingType === ShadingType.TwoTone) {
-        context.fillStyle = `hsl(${this.hue} 100 ${Utils.lerp(80, 50, 1, 1 - (1 - lightDistanceRatio) ** 2)} / ${this.opacity}%)`;
+      if (item.configRef.current.shadingType === ShadingType.TwoTone) {
+        context.fillStyle = `hsl(${item.hue} 100 ${Utils.lerp(80, 50, 1, 1 - (1 - lightDistanceRatio) ** 2)} / ${item.opacity}%)`;
         context.fill();
 
         context.save();
         context.clip();
 
         context.beginPath();
-        const radiusToCorner = this.radius * Math.SQRT2;
+        const radiusToCorner = item.radius * Math.SQRT2;
         const shadowHeight = 1 - lightDistanceRatio;
         const shadowCos = Math.cos(lightAngle + Math.PI * -0.5);
         const shadowSin = Math.sin(lightAngle + Math.PI * -0.5);
 
-        const shadowBottomRight = Point.add(this.position, Vector.rotate({ x: radiusToCorner, y: radiusToCorner }, shadowCos, shadowSin));
-        const shadowBottomLeft = Point.add(this.position, Vector.rotate({ x: -radiusToCorner, y: radiusToCorner }, shadowCos, shadowSin));
-        const shadowTopLeft = Point.add(this.position, Vector.rotate({ x: -radiusToCorner, y: -this.radius * shadowHeight }, shadowCos, shadowSin));
-        const shadowControl = Point.add(this.position, Vector.rotate({ x: 0, y: radiusToCorner - this.radius * shadowHeight }, shadowCos, shadowSin));
-        const shadowTopRight = Point.add(this.position, Vector.rotate({ x: radiusToCorner, y: -this.radius * shadowHeight }, shadowCos, shadowSin));
+        const shadowBottomRight = Point.add(item.position, Vector.rotate({ x: radiusToCorner, y: radiusToCorner }, shadowCos, shadowSin));
+        const shadowBottomLeft = Point.add(item.position, Vector.rotate({ x: -radiusToCorner, y: radiusToCorner }, shadowCos, shadowSin));
+        const shadowTopLeft = Point.add(item.position, Vector.rotate({ x: -radiusToCorner, y: -item.radius * shadowHeight }, shadowCos, shadowSin));
+        const shadowControl = Point.add(item.position, Vector.rotate({ x: 0, y: radiusToCorner - item.radius * shadowHeight }, shadowCos, shadowSin));
+        const shadowTopRight = Point.add(item.position, Vector.rotate({ x: radiusToCorner, y: -item.radius * shadowHeight }, shadowCos, shadowSin));
 
         context.moveTo(shadowBottomRight.x, shadowBottomRight.y);
         context.lineTo(shadowBottomLeft.x, shadowBottomLeft.y);
         context.lineTo(shadowTopLeft.x, shadowTopLeft.y);
-        context.arcTo(shadowControl.x, shadowControl.y, shadowTopRight.x, shadowTopRight.y, this.radius);
+        context.arcTo(shadowControl.x, shadowControl.y, shadowTopRight.x, shadowTopRight.y, item.radius);
         context.lineTo(shadowTopRight.x, shadowTopRight.y);
         context.closePath();
-        context.fillStyle = `hsl(${this.hue} 100 ${Utils.lerp(50, 25, 1, lightDistanceRatio)} / 50%)`;
+        context.fillStyle = `hsl(${item.hue} 100 ${Utils.lerp(50, 25, 1, lightDistanceRatio)} / 50%)`;
 
         context.fill();
 
         context.restore();
       } else {
         const lightUnit = Vector.unit(lightOffset);
-        const highlightCenter = Point.sub(this.position, Vector.mult(lightUnit, this.radius * lightDistanceRatio));
-        const gradient = context.createRadialGradient(highlightCenter.x, highlightCenter.y, 0, this.position.x, this.position.y, this.radius * Math.SQRT2);
-        gradient.addColorStop(0, `hsl(${this.hue} 100 ${Utils.lerp(80, 60, 1, lightDistanceRatio)} / ${this.opacity}%)`);
-        gradient.addColorStop(1, `hsl(${this.hue} 100 ${Utils.lerp(40, 25, 1, lightDistanceRatio)} / ${this.opacity}%)`);
+        const highlightCenter = Point.sub(item.position, Vector.mult(lightUnit, item.radius * lightDistanceRatio));
+        const gradient = context.createRadialGradient(highlightCenter.x, highlightCenter.y, 0, item.position.x, item.position.y, item.radius * Math.SQRT2);
+        gradient.addColorStop(0, `hsl(${item.hue} 100 ${Utils.lerp(80, 60, 1, lightDistanceRatio)} / ${item.opacity}%)`);
+        gradient.addColorStop(1, `hsl(${item.hue} 100 ${Utils.lerp(40, 25, 1, lightDistanceRatio)} / ${item.opacity}%)`);
         context.fillStyle = gradient;
         context.fill();
       }
     }
 
     if (context.shadowBlur) context.shadowBlur = 0;
-  }
-  contains(point: PointLike): boolean {
-    return this.aabb.min.x <= point.x && this.aabb.max.x >= point.x && this.aabb.min.y <= point.y && this.aabb.max.y >= point.y && pointInPoly(point, this);
   }
 }

@@ -1,4 +1,4 @@
-import { type ChangeEvent, type MouseEvent, type TouchEvent, useCallback, useEffect, useId, useRef } from 'react';
+import { type ChangeEvent, type CSSProperties, type MouseEvent, type TouchEvent, useCallback, useEffect, useId, useMemo, useRef } from 'react';
 import { Button } from '@/components/button';
 import { Utils } from '@/lib/utils';
 
@@ -25,10 +25,15 @@ export function Range({
 
   const handleChange = useCallback((event: ChangeEvent<HTMLInputElement>) => onValueChange(event.target.valueAsNumber), [onValueChange]);
 
+  // biome-ignore format: no
+  const style = useMemo(() => ({
+    '--percent-to': `${(100 * (value - min)) / (max - min)}%`,
+  }), [min, max, value]) as CSSProperties;
+
   return (
-    <div className='flex flex-row gap-2 items-center flex-wrap justify-center range'>
+    <div className='flex flex-row gap-2 items-center justify-center range'>
       <label htmlFor={id}>{label}</label>
-      <input id={id} type='range' min={min} max={max} step={step} value={value} onChange={handleChange} />
+      <input id={id} type='range' min={min} max={max} step={step} value={value} onChange={handleChange} style={style} />
       <span>{`${value.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${unit}`}</span>
     </div>
   );
@@ -71,7 +76,8 @@ export function RangeTwo({
     if (!trackElemRef.current || !valueMinElemRef.current || !valueMaxElemRef.current || !spanElemRef.current) return;
     const minPercent = `${(100 * (valueMin - min)) / (max - min)}%`;
     const maxPercent = `${(100 * (valueMax - min)) / (max - min)}%`;
-    trackElemRef.current.style.background = `border-box linear-gradient(to right, transparent ${minPercent}, var(--color-accent) ${minPercent}, var(--color-accent) ${maxPercent}, transparent ${maxPercent}) no-repeat`;
+    trackElemRef.current.style.setProperty('--percent-from', minPercent)
+    trackElemRef.current.style.setProperty('--percent-to', maxPercent)
     valueMinElemRef.current.style.left = minPercent;
     valueMaxElemRef.current.style.left = maxPercent;
     spanElemRef.current.children[0].textContent = `${valueMin.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })} -`;
@@ -152,7 +158,7 @@ export function RangeTwo({
   );
 
   return (
-    <div className='flex flex-row gap-2 items-center flex-wrap justify-center range'>
+    <div className='flex flex-row gap-2 items-center justify-center range'>
       <label htmlFor={id}>{label}</label>
       <div
         className='slider-track relative w-45 group touch-none bg-transparent'

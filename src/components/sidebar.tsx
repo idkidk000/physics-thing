@@ -4,25 +4,20 @@ import { type RadioOption, RadioSlider, RadioSwitch } from '@/components/radio';
 import { Range, RangeTwo } from '@/components/range';
 import { Switch } from '@/components/switch';
 import { VectorPicker } from '@/components/vector-picker';
-import { EntityType, ShadingType, useConfig } from '@/hooks/config';
+import { ColourSchemeType, EntityType, ShadingType, useConfig } from '@/hooks/config';
 import { HotKeys, useEvent } from '@/hooks/event';
 import type { VectorLike } from '@/lib/2d/core';
 import { Utils } from '@/lib/utils';
 
 const shadingOptions: RadioOption[] = Utils.enumEntries(ShadingType).map(([key, value]) => ({ label: Utils.pascalToSentenceCase(key), value }));
 const entityOptions: RadioOption[] = Utils.enumEntries(EntityType).map(([key, value]) => ({ label: Utils.pascalToSentenceCase(key), value }));
+const schemeOptions: RadioOption[] = Utils.enumEntries(ColourSchemeType).map(([key, value]) => ({ label: Utils.pascalToSentenceCase(key), value }));
 
 export function Sidebar() {
   const { config, setConfig } = useConfig();
   const [open, setOpen] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
   const { eventRef } = useEvent();
-
-  useEffect(() => {
-    const controller = new AbortController();
-    eventRef.current.subscribe('menu', () => setOpen((prev) => !prev), controller.signal);
-    return () => controller.abort();
-  }, []);
 
   const handleClickSpawnChange = useCallback((clickSpawn: boolean) => setConfig((prev) => ({ ...prev, clickSpawn })), []);
   const handleCollideVelocityRatioChange = useCallback((collideVelocityRatio: number) => setConfig((prev) => ({ ...prev, collideVelocityRatio })), []);
@@ -46,12 +41,19 @@ export function Sidebar() {
   const handleShadingChange = useCallback((shading: ShadingType) => setConfig((prev) => ({ ...prev, shadingType: shading })), []);
   const handleStepVelocityRatioChange = useCallback((stepVelocityRatio: number) => setConfig((prev) => ({ ...prev, stepVelocityRatio })), []);
   const handleLightMotionChange = useCallback((lightMotion: number) => setConfig((prev) => ({ ...prev, lightMotion })), []);
+  const handleColourSchemeChange = useCallback((colourScheme: ColourSchemeType) => setConfig((prev) => ({ ...prev, colourScheme })), []);
 
   // biome-ignore format: no
   const toggleOpen = useCallback(() => setOpen((prev) => {
     ref.current?.scrollTo({ top: 0, behavior: 'instant' });
     return !prev;
   }), []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    eventRef.current.subscribe('menu', toggleOpen, controller.signal);
+    return () => controller.abort();
+  }, [toggleOpen]);
 
   return (
     <>
@@ -90,7 +92,7 @@ export function Sidebar() {
       </Button>
       {open && <div className='fixed inset-0' onClick={toggleOpen} onTouchEnd={toggleOpen} />}
       <div
-        className='fixed top-0 left-0 bottom-0 w-auto z-10 transition-[translate] border-e-2 border-border rounded-e bg-background aria-hidden:-translate-x-full shadow-2xl aria-hidden:shadow-none shadow-black'
+        className='fixed top-0 left-0 bottom-0 z-10 transition-[translate] border-e-2 border-border rounded-e bg-background aria-hidden:-translate-x-full shadow-2xl aria-hidden:shadow-none shadow-black w-108 max-w-full'
         role='dialog'
         aria-hidden={!open}
       >
@@ -151,7 +153,15 @@ export function Sidebar() {
 
           <hr />
 
-          <RadioSwitch options={entityOptions} value={config.entityType} onValueChange={handleEntityTypeChange} multi multiFallback={EntityType.Circle} />
+          <RadioSwitch
+            options={entityOptions}
+            value={config.entityType}
+            onValueChange={handleEntityTypeChange}
+            multi
+            multiFallback={EntityType.Circle}
+            className='grid grid-cols-3'
+            label='Entity types'
+          />
 
           <hr />
 
@@ -163,14 +173,23 @@ export function Sidebar() {
 
           <hr />
 
-          <div className='grid grid-cols-2 gap-2'>
-            <HotKeys />
-          </div>
+          <RadioSwitch
+            options={schemeOptions}
+            value={config.colourScheme}
+            onValueChange={handleColourSchemeChange}
+            label='Colour scheme'
+            className='grid grid-cols-3'
+          />
+
+          <hr />
+
+          <HotKeys />
 
           <hr />
 
           <a href='https://github.com/idkidk000/physics-thing' target='_blank' rel='noopener noreferrer' className='flex flex-row gap-2 mx-auto'>
             Source
+            {/* from https://lucide.dev/icons/github */}
             <svg
               width='24'
               height='24'

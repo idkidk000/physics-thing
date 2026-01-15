@@ -64,7 +64,7 @@ export function VectorPicker({
       const { beta, gamma } = event;
       if (beta === null || gamma === null) return;
       if (deviceOffsetRef.current === null) {
-        deviceOffsetRef.current = { x: gamma, y: beta };
+        deviceOffsetRef.current = Vector.sub({ x: gamma, y: beta }, Vector.mult(deferredValueRef.current, 90 / range));
         return;
       }
       const raw = Vector.sub({ x: gamma, y: beta }, deviceOffsetRef.current);
@@ -98,6 +98,7 @@ export function VectorPicker({
     if (Math.abs(value.y)<=min) value.y=0;
     deferredValueRef.current = value;
     timeoutRef.current ??= setTimeout(sendDeferredValue, updateMillis);
+    deviceOffsetRef.current=null
     updateControl(value);
   }, [range, sendDeferredValue, updateControl, updateMillis, digits]);
 
@@ -132,8 +133,9 @@ export function VectorPicker({
         onTouchEnd={sendDeferredValue}
         onTouchMove={handleTouchMove}
         onClick={handleMouseClick}
-        // biome-ignore lint/a11y/useAriaPropsForRole: this is the least unsuitable role but aria-valuenow must be a number
         role='slider'
+        // `slider` seems like the least unsuitable role but it requires aria-valuenow to be a number
+        aria-valuenow={Point.inspect(value) as unknown as number}
       >
         <div ref={dragRef} className='slider-thumb absolute -translate-3 bg-accent cursor-move'></div>
         <svg

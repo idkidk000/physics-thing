@@ -1,4 +1,16 @@
-import { createContext, type Dispatch, type ReactNode, type RefObject, type SetStateAction, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  type Dispatch,
+  type ReactNode,
+  type RefObject,
+  type SetStateAction,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useEvent } from '@/hooks/event';
 import type { VectorLike } from '@/lib/2d/core';
 
@@ -16,57 +28,63 @@ export enum EntityType {
   Star = 8,
 }
 
+export enum ColourSchemeType {
+  Dark,
+  Light,
+  System,
+}
+
 export interface Config {
-  dragVelocity: number;
-  hueCenter: number;
-  hueRange: number;
-  maxAge: number;
-  physicsSteps: number;
-  radiusMin: number;
-  radiusMax: number;
-  paused: boolean;
-  gravity: VectorLike;
-  collideVelocityRatio: number;
-  stepVelocityRatio: number;
-  restitutionCoefficient: number;
-  drawBlur: boolean;
-  shadingType: ShadingType;
-  initialEntities: number;
   clickSpawn: boolean;
+  collideRotationalVelocityRatio: number;
+  collideVelocityRatio: number;
+  colourScheme: ColourSchemeType;
+  dragVelocity: number;
+  drawBlur: boolean;
   /** bitfield of `EntityType` */
   entityType: number;
-  minImpulse: number;
-  collideRotationalVelocityRatio: number;
-  rotationalVelocityRatio: number;
-  showDebug: boolean;
-  minCollisionVelocityToImpartRotationalVelocity: number;
+  gravity: VectorLike;
+  hueCenter: number;
+  hueRange: number;
+  initialEntities: number;
   lightMotion: number;
+  maxAge: number;
+  minImpulse: number;
+  paused: boolean;
+  physicsSteps: number;
+  radiusMax: number;
+  radiusMin: number;
+  restitutionCoefficient: number;
+  rotationalVelocityRatio: number;
+  shadingType: ShadingType;
+  showDebug: boolean;
+  stepVelocityRatio: number;
 }
 
 export const defaultConfig: Config = {
-  dragVelocity: 0.25,
-  hueCenter: 220,
-  hueRange: 60,
-  maxAge: 0,
-  physicsSteps: 5,
-  radiusMin: 20,
-  radiusMax: 70,
-  paused: false,
-  gravity: { x: 0, y: 0 },
-  collideVelocityRatio: 0.999,
-  stepVelocityRatio: 0.999,
-  restitutionCoefficient: 0.999,
-  drawBlur: false,
-  shadingType: ShadingType.TwoTone,
-  initialEntities: 20,
   clickSpawn: false,
-  entityType: EntityType.Circle | EntityType.Square | EntityType.Heart | EntityType.Star,
-  minImpulse: 10,
   collideRotationalVelocityRatio: 0.99,
-  rotationalVelocityRatio: 0.999,
-  showDebug: false,
-  minCollisionVelocityToImpartRotationalVelocity: 1,
+  collideVelocityRatio: 0.997,
+  colourScheme: ColourSchemeType.Dark,
+  dragVelocity: 0.25,
+  drawBlur: false,
+  entityType: EntityType.Circle | EntityType.Square | EntityType.Heart | EntityType.Star,
+  gravity: { x: 0, y: 0 },
+  hueCenter: 280,
+  hueRange: 60,
+  initialEntities: 20,
   lightMotion: 10,
+  maxAge: 0,
+  minImpulse: 10,
+  paused: false,
+  physicsSteps: 5,
+  radiusMax: 70,
+  radiusMin: 20,
+  restitutionCoefficient: 0.997,
+  rotationalVelocityRatio: 0.997,
+  shadingType: ShadingType.TwoTone,
+  showDebug: false,
+  stepVelocityRatio: 0.997,
 };
 
 interface Context {
@@ -85,11 +103,13 @@ function readLocalStorage(): Config | null {
 
 function writeLocalStorage(config: Config): void {
   localStorage.setItem('physicsThing.config', JSON.stringify(config));
+  document.body.classList.toggle('dark', config.colourScheme === ColourSchemeType.Dark);
+  document.body.classList.toggle('light', config.colourScheme === ColourSchemeType.Light);
   document.documentElement.style.setProperty('--hue-center', `${config.hueCenter}`);
 }
 
 export function ConfigProvider({ children }: { children: ReactNode }) {
-  const [config, setConfig] = useState<Config>({ ...defaultConfig, ...readLocalStorage() });
+  const [config, setConfig] = useState<Config>({ ...defaultConfig, ...readLocalStorage(), paused: false });
   const configRef = useRef<Config>(config);
   const { eventRef } = useEvent();
 
@@ -98,10 +118,11 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     eventRef.current.subscribe('pause', () => setConfig((prev) => ({ ...prev, paused: !prev.paused })), controller.signal);
     eventRef.current.subscribe('defaults', () => setConfig(defaultConfig), controller.signal);
     eventRef.current.subscribe('showDebug', () => setConfig((prev) => ({ ...prev, showDebug: !prev.showDebug })), controller.signal);
+    eventRef.current.subscribe('reset', () => setConfig((prev) => ({ ...prev, paused: false })), controller.signal);
     return () => controller.abort();
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     configRef.current = config;
     writeLocalStorage(config);
   }, [config]);

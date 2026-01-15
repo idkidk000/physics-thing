@@ -14,7 +14,7 @@ export interface LineLike {
   b: PointLike;
 }
 
-export interface AABB {
+export interface AABBLike {
   min: PointLike;
   max: PointLike;
 }
@@ -27,7 +27,7 @@ export interface CircleLike {
 
 export interface PolyLike {
   position: Point;
-  aabb: AABB;
+  aabb: AABBLike;
   points: PointLike[];
 }
 
@@ -199,13 +199,13 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   }
 }
 
-export class Point extends PointOrVector<PointLike> {
+export class Point extends PointOrVector<PointLike> implements PointLike {
   toVector(): Vector {
     return new Vector(this);
   }
 }
 
-export class Vector extends PointOrVector<VectorLike> {
+export class Vector extends PointOrVector<VectorLike> implements VectorLike {
   unit(): Vector {
     return new Vector(Vector.unit(this));
   }
@@ -262,7 +262,7 @@ export class Vector extends PointOrVector<VectorLike> {
   }
 }
 
-export class Line {
+export class Line implements LineLike {
   a: PointLike;
   b: PointLike;
   constructor(...params: [x0: number, y0: number, x1: number, y1: number] | [a: PointLike, b: PointLike] | [object: LineLike]) {
@@ -312,5 +312,57 @@ export class Line {
 
   static is(item: unknown): item is Line {
     return typeof item === 'object' && item !== null && 'a' in item && 'b' in item && PointOrVector.is(item.a) && PointOrVector.is(item.b);
+  }
+}
+
+export class AABB implements AABBLike {
+  min: PointLike;
+  max: PointLike;
+  constructor(...params: [minX: number, minY: number, maxX: number, maxY: number] | [object: AABBLike] | [points: PointLike[]]) {
+    if (params.length === 4 && params.every((param) => typeof param === 'number')) {
+      this.min = { x: params[0], y: params[1] };
+      this.max = { x: params[2], y: params[3] };
+    } else if (params.length === 1 && AABB.is(params[0])) {
+      this.min = {
+        x: params[0].min.x,
+        y: params[0].min.y,
+      };
+      this.max = {
+        x: params[0].max.x,
+        y: params[0].max.y,
+      };
+    } else if (params.length && params.every((param) => Point.is(param))) {
+      let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
+      for (const point of params) {
+        minX = Math.min(minX, point.x);
+        minY = Math.min(minY, point.y);
+        maxX = Math.max(maxX, point.x);
+        maxY = Math.max(maxY, point.y);
+      }
+      this.min = {
+        x: minX,
+        y: minY,
+      };
+      this.max = {
+        x: maxX,
+        y: maxY,
+      };
+    } else throw new Error('invalid constructor params');
+  }
+  intersects(other: AABBLike): boolean {
+    return AABB.intersects(this, other);
+  }
+  contains(point: PointLike): boolean {
+    return AABB.contains(this, point);
+  }
+
+  static contains(item: AABBLike, point: PointLike): boolean {
+    return point.x <= item.max.x && point.x >= item.min.x && point.y <= item.max.y && point.y >= item.min.y;
+  }
+  static intersects(item: AABBLike, other: AABBLike): boolean {
+    return item.min.x <= other.max.x && item.max.x >= other.min.x && item.min.y <= other.max.y && item.max.y >= other.min.y;
+  }
+  static is(item: unknown): item is AABBLike {
+    return typeof item === 'object' && item !== null && 'min' in item && 'max' in item && Point.is(item.min) && Point.is(item.max);
   }
 }

@@ -38,6 +38,7 @@ export function RadioSwitch({
   options,
   multi = false,
   multiFallback = 0,
+  className = 'flex flex-row flex-wrap',
 }: {
   value: number;
   onValueChange: (value: number) => void;
@@ -45,6 +46,7 @@ export function RadioSwitch({
   options: RadioOption[];
   multi?: boolean;
   multiFallback?: number;
+  className?: string;
 }) {
   const id = useId();
 
@@ -55,7 +57,7 @@ export function RadioSwitch({
           {label}
         </label>
       )}
-      <div className='flex flex-row gap-4 items-center justify-between' role='radiogroup' id={id}>
+      <div className={`gap-4 items-center justify-between ${className}`} role='radiogroup' id={id}>
         {options.map((option) => (
           <RadioSwitchOption key={option.value} option={option} value={value} onValueChange={onValueChange} multi={multi} multiFallback={multiFallback} />
         ))}
@@ -104,12 +106,10 @@ export function RadioSlider({
     left: `${(100 / options.length) * (options.findIndex((option) => option.value === value) + 0.5)}%`,
   }), [value, options]);
 
-  const trackStyle: CSSProperties = useMemo(() => {
-    const percent = `${(100 / options.length) * (options.findIndex((option) => option.value === value) + 0.5)}%`;
-    return {
-      background: `border-box linear-gradient(to right, var(--color-accent) ${percent}, transparent ${percent}) no-repeat`,
-    };
-  }, [options.findIndex, options.length, value]);
+  // biome-ignore format: no
+  const trackStyle = useMemo(() => ({
+    '--percent-to': `${(100 / options.length) * (options.findIndex((option) => option.value === value) + 0.5)}%`,
+  }), [options.findIndex, options.length, value]) as CSSProperties;
 
   // biome-ignore format: no
   const sendUpdateIfChanged = useCallback((pointer: { clientX: number }) => {
@@ -141,7 +141,7 @@ export function RadioSlider({
       </div>
       <div
         role='radiogroup'
-        className='slider-track col-span-3 relative bg-transparent mb-2 touch-none'
+        className='slider-track col-span-3 relative bg-transparent mb-2 touch-none transition-[--percent-to]'
         onClick={sendUpdateIfChanged}
         onMouseMove={handleMouseMove}
         onTouchMove={handleTouchMove}
@@ -151,7 +151,7 @@ export function RadioSlider({
         <Button
           type='button'
           role='radio'
-          className='slider-thumb absolute -translate-1/2 top-1/2 pointer-events-none'
+          className='slider-thumb absolute -translate-1/2 top-1/2 pointer-events-none transition-[left]'
           variant='unstyled'
           style={buttonStyle}
         />
