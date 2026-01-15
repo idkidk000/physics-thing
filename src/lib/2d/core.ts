@@ -70,11 +70,16 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   trunc(): this {
     return new this.#typedConstructor(PointOrVector.trunc(this));
   }
-  clamp(min: Interface, max: Interface): this {
-    return new this.#typedConstructor(PointOrVector.clamp(this, min, max));
+  clamp(...params: [min: Interface, max: Interface] | [aabb: AABBLike]): this {
+    return new this.#typedConstructor(PointOrVector.clamp(this, ...params));
   }
   roundTo(digits: number): this {
     return new this.#typedConstructor(PointOrVector.roundTo(this, digits));
+  }
+  set(value: Interface): this {
+    this.x = value.x;
+    this.y = value.y;
+    return this;
   }
 
   addEq(other: Interface): this {
@@ -117,8 +122,8 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
     [this.x, this.y] = [x, y];
     return this;
   }
-  clampEq(min: Interface, max: Interface): this {
-    const { x, y } = PointOrVector.clamp(this, min, max);
+  clampEq(...params: [min: Interface, max: Interface] | [aabb: AABBLike]): this {
+    const { x, y } = PointOrVector.clamp(this, ...params);
     [this.x, this.y] = [x, y];
     return this;
   }
@@ -168,8 +173,18 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   static trunc(item: PointOrVectorLike): PointOrVectorLike {
     return { x: Math.trunc(item.x), y: Math.trunc(item.y) };
   }
-  static clamp(item: PointOrVectorLike, min: PointOrVectorLike, max: PointOrVectorLike): PointOrVectorLike {
-    return { x: Math.min(Math.max(min.x, item.x), max.x), y: Math.min(Math.max(min.y, item.y), max.y) };
+  static clamp(item: PointOrVectorLike, ...params: [min: PointOrVectorLike, max: PointOrVectorLike] | [aabb: AABBLike]): PointOrVectorLike {
+    if (params.length === 2 && Point.is(params[0] && Point.is(params[1])))
+      return {
+        x: Math.min(Math.max(params[0].x, item.x), params[1].x),
+        y: Math.min(Math.max(params[0].y, item.y), params[1].y),
+      };
+    if (params.length === 1 && AABB.is(params[0]))
+      return {
+        x: Math.min(Math.max(params[0].min.x, item.x), params[0].max.x),
+        y: Math.min(Math.max(params[0].min.y, item.y), params[0].max.y),
+      };
+    throw new Error('invalid param');
   }
   static roundTo(item: PointOrVectorLike, digits: number): PointOrVectorLike {
     const multiplier = 10 ** digits;

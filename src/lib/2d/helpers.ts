@@ -4,11 +4,12 @@ export function pointInCircle(point: PointLike, circle: CircleLike): boolean {
   return Vector.hypot2(Vector.sub(point, circle.position)) < circle.radius2;
 }
 
-export function pointInPoly(point: PointLike, poly: PolyLike): boolean {
+export function pointInPoly(point: PointLike, poly: PolyLike, stablePoints?: PointLike[]): boolean {
   if (!AABB.contains(poly.aabb, point)) return false;
   let intersections = 0;
-  for (let pp = 1; pp <= poly.points.length; ++pp) {
-    const polyLine: LineLike = { a: poly.points[pp - 1], b: poly.points[pp % poly.points.length] };
+  const points = stablePoints ?? poly.points;
+  for (let pp = 1; pp <= points.length; ++pp) {
+    const polyLine: LineLike = { a: points[pp - 1], b: points[pp % points.length] };
     if (point.y < polyLine.a.y && point.y < polyLine.b.y) continue;
     if (point.y > polyLine.a.y && point.y > polyLine.b.y) continue;
     if (point.x > polyLine.a.x && point.x > polyLine.b.x) continue;
@@ -26,19 +27,22 @@ export function circleIntersectsCircle(a: CircleLike, b: CircleLike): PointLike 
 
 export function circleIntersectsPoly(circle: CircleLike, poly: PolyLike): PointLike | false {
   // position is included to prevent fallback to unstable [circumference closest] when circle is inside poly
-  for (const point of [poly.position, ...poly.points]) if (pointInCircle(point, circle)) return point;
+  const points = poly.points;
+  for (const point of [poly.position, ...points]) if (pointInCircle(point, circle)) return point;
   /** closest point to circle's position in poly's aabb */
-  const ptAabbClosest = Point.clamp(circle.position, poly.aabb.min, poly.aabb.max);
+  const ptAabbClosest = Point.clamp(circle.position, poly.aabb);
   const vecAabbClosest = Vector.sub(Point.eq(circle.position, ptAabbClosest) ? poly.position : ptAabbClosest, circle.position);
   const circumferenceClosest = Point.add(circle.position, Vector.mult(Vector.unit(vecAabbClosest), circle.radius));
-  if (pointInPoly(circumferenceClosest, poly)) return circumferenceClosest;
+  if (pointInPoly(circumferenceClosest, poly, points)) return circumferenceClosest;
   return false;
 }
 
 /** this would also reqire line intersection checks if a or b could be rectangles */
 export function polyIntersectsPoly(a: PolyLike, b: PolyLike): PointLike | false {
-  for (const point of a.points) if (pointInPoly(point, b)) return point;
-  for (const point of b.points) if (pointInPoly(point, a)) return point;
+  const aPoints = a.points;
+  const bPoints = b.points;
+  for (const point of aPoints) if (pointInPoly(point, b, bPoints)) return point;
+  for (const point of bPoints) if (pointInPoly(point, a, aPoints)) return point;
   // for (let pa = 1; pa <= a.points.length; ++pa) {
   //   const lineA: LineLike = { a: a.points[pa - 1], b: a.points[pa % a.points.length] };
   //   let intersections = 0;
@@ -59,8 +63,9 @@ export function polyIntersectsPoly(a: PolyLike, b: PolyLike): PointLike | false 
 
 /** shoelace */
 export function polyArea(poly: PolyLike): number {
+  const points = poly.points;
   return (
-    [...poly.points, poly.points[0]].reduce((acc, p0, i, arr) => {
+    [...points, points[0]].reduce((acc, p0, i, arr) => {
       const p1 = arr[(i + 1) % arr.length];
       acc += p0.x * p1.y - p0.y * p1.x;
       return acc;

@@ -145,6 +145,13 @@ export abstract class Entity {
   abstract get points(): PointLike[];
   /** `static abstract` isn't valid syntax, but implement a `static` draw method and call it from an instanced method of the same name */
   abstract draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void;
+  /** an extremely grim workaround to simplify abstract points and aabb cached getters. but it's very good for performance and hooking `Point` would be worse
+   *
+   * **MUST BE CALLED AFTER UPDATING POSITION**
+   *
+   * rotation and radius are hooked already since they're just plain number properties
+   */
+  abstract invalidatePoints(): void;
 
   contains(point: PointLike): boolean {
     return Entity.contains(this, point);
@@ -174,9 +181,11 @@ export abstract class Entity {
   static intersects(item: Entity, other: Entity): false | PointLike {
     // AABB intersection has already been tested by simulation.step
     // if (!AABB.intersects(this.aabb, other.aabb)) return false;
-    if (item.points.length && other.points.length) return polyIntersectsPoly(item, other);
-    if (item.points.length) return circleIntersectsPoly(other, item);
-    if (other.points.length) return circleIntersectsPoly(item, other);
+    const itemPoints = item.points;
+    const otherPoints = other.points;
+    if (itemPoints.length && otherPoints.length) return polyIntersectsPoly(item, other);
+    if (itemPoints.length) return circleIntersectsPoly(other, item);
+    if (otherPoints.length) return circleIntersectsPoly(item, other);
     return circleIntersectsCircle(item, other);
   }
   static collide(item: Entity, other: Entity): void {
@@ -207,8 +216,14 @@ export abstract class Entity {
     if (!other.fixed) other.velocity.addEq(Vector.div(impulseVector, other.mass)).multEq(item.configRef.current.collideVelocityRatio);
 
     // actively move collliders out of static objects by 1 unit
-    if (other.fixed && !item.fixed) item.position.subEq(collisionNormal);
-    if (item.fixed && !other.fixed) other.position.addEq(collisionNormal);
+    if (other.fixed && !item.fixed) {
+      item.position.subEq(collisionNormal);
+      item.invalidatePoints();
+    }
+    if (item.fixed && !other.fixed) {
+      other.position.addEq(collisionNormal);
+      other.invalidatePoints();
+    }
 
     const perpendicularDp = Vector.dot(Vector.rotate(Vector.unit(velocityVector), Math.PI * 0.5), collisionNormal);
     // TODO: this should be derived from velocityVector hypot, hypot of each object to collision point (like gears), and mass of each object (share of imparted rotational velocity)
@@ -220,46 +235,50 @@ export abstract class Entity {
   static step(item: Entity, millis: number, bounds: PointLike): void {
     const config = item.configRef.current;
     if (!item.#dragging && !item.#fixed) {
-      item.velocity.addEq(Vector.mult(config.gravity, 0.003));
+      item.velocity.addEq(Vector.mult(config.gravity, millis * 0.0002));
       item.position.addEq(item.velocity.mult(millis));
+      item.invalidatePoints();
       item.rotation += item.rotationalVelocity * 0.01;
     }
 
     // TODO: do rotational velocity properly
     let hit = false;
-    if (item.aabb.min.x < 0) {
-      item.position.x -= item.aabb.min.x;
+    const aabb = item.aabb;
+    if (aabb.min.x < 0) {
+      item.position.x -= aabb.min.x;
       item.velocity.x *= -config.collideVelocityRatio;
       hit = true;
-    } else if (item.aabb.max.x > bounds.x) {
-      item.position.x -= item.aabb.max.x - bounds.x;
+    } else if (aabb.max.x > bounds.x) {
+      item.position.x -= aabb.max.x - bounds.x;
       item.velocity.x *= -config.collideVelocityRatio;
       hit = true;
     }
 
-    if (item.aabb.min.y < 0) {
-      item.position.y -= item.aabb.min.y;
+    if (aabb.min.y < 0) {
+      item.position.y -= aabb.min.y;
       item.velocity.y *= -config.collideVelocityRatio;
       hit = true;
-    } else if (item.aabb.max.y > bounds.y) {
-      item.position.y -= item.aabb.max.y - bounds.y;
+    } else if (aabb.max.y > bounds.y) {
+      item.position.y -= aabb.max.y - bounds.y;
       item.velocity.y *= -config.collideVelocityRatio;
       hit = true;
     }
 
     item.velocity.multEq(config.stepVelocityRatio);
     item.rotationalVelocity *= config.rotationalVelocityRatio * (hit ? config.collideRotationalVelocityRatio : 1);
+    if (hit) item.invalidatePoints();
   }
   static drawDebug(item: Entity, context: CanvasRenderingContext2D): void {
     context.strokeStyle = '#0f0';
-    context.strokeRect(item.aabb.min.x, item.aabb.min.y, item.aabb.max.x - item.aabb.min.x, item.aabb.max.y - item.aabb.min.y);
+    const aabb = item.aabb;
+    context.strokeRect(aabb.min.x, aabb.min.y, aabb.max.x - aabb.min.x, aabb.max.y - aabb.min.y);
     context.fillStyle = '#0f0';
     context.textBaseline = 'bottom';
     context.textAlign = 'right';
     context.fillText(
       `{ x: ${item.velocity.x.toLocaleString(...localeCfg)}, y: ${item.velocity.y.toLocaleString(...localeCfg)}, r: ${item.rotationalVelocity.toLocaleString(...localeCfg)} }${item.fixed ? ' f' : ''} ${item.#collisionTime.toLocaleString(...localeCfg)}`,
-      item.aabb.max.x,
-      item.aabb.min.y
+      aabb.max.x,
+      aabb.min.y
     );
     if (item.#collisions.length) {
       context.strokeStyle = '#f00';
@@ -280,18 +299,18 @@ export abstract class Entity {
       }
       context.stroke();
     }
-    if (item.points.length) {
+    const points = item.points;
+    if (points.length) {
       context.strokeStyle = '#f0f';
       context.beginPath();
-      context.moveTo(item.points[0].x, item.points[0].y);
-      for (const point of item.points.slice(1)) context.lineTo(point.x, point.y);
+      context.moveTo(points[0].x, points[0].y);
+      for (const point of points.slice(1)) context.lineTo(point.x, point.y);
       context.closePath();
       context.stroke();
     }
   }
   static zero(item: Entity): void {
-    item.velocity.x = 0;
-    item.velocity.y = 0;
+    item.velocity.set({ x: 0, y: 0 });
     item.rotationalVelocity = 0;
     item.rotation = 0;
   }

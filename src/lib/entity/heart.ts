@@ -23,8 +23,6 @@ const shape: VectorLike[] = [
 
 export class Heart extends Entity {
   #mass = 0;
-  /** invalidation key for `#points` */
-  #pointsPosition: PointLike | null = null;
   #points: PointLike[] | null = null;
   #aabb: AABBLike | null = null;
   constructor(...params: ConstructorParameters<typeof Entity>) {
@@ -36,7 +34,7 @@ export class Heart extends Entity {
   }
   override set radius(value: number) {
     super.radius = value;
-    this.#pointsPosition = null;
+    this.invalidatePoints();
     this.#mass = polyArea(this);
   }
   override get radius(): number {
@@ -44,13 +42,13 @@ export class Heart extends Entity {
   }
   override set rotation(value: number) {
     super.rotation = value;
-    this.#pointsPosition = null;
+    this.invalidatePoints();
   }
   override get rotation(): number {
     return super.rotation;
   }
   get aabb(): AABBLike {
-    if (!this.#aabb || !this.#pointsPosition || !Point.eq(this.#pointsPosition, this.position)) {
+    if (!this.#aabb) {
       let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
       for (const point of this.points) {
         minX = Math.min(minX, point.x);
@@ -66,9 +64,12 @@ export class Heart extends Entity {
     return this.#aabb;
   }
   get points(): PointLike[] {
-    if (!this.#points || !this.#pointsPosition || !Point.eq(this.#pointsPosition, this.position))
-      this.#points = shape.map((vec) => Point.add(this.position, Vector.rotate(Vector.mult(vec, this.radius), this.cos, this.sin)));
+    if (!this.#points) this.#points = shape.map((vec) => Point.add(this.position, Vector.rotate(Vector.mult(vec, this.radius), this.cos, this.sin)));
     return this.#points;
+  }
+  invalidatePoints(): void {
+    this.#points = null;
+    this.#aabb = null;
   }
   draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void {
     Heart.draw(this, context, light, maxLightDistance);
@@ -95,13 +96,14 @@ export class Heart extends Entity {
       const lightDistanceRatio = lightDistance / maxLightDistance;
       const lightAngle = Vector.toRadians(lightOffset);
 
+      const points = item.points;
       context.beginPath();
-      context.moveTo(item.points[0].x, item.points[0].y);
+      context.moveTo(points[0].x, points[0].y);
       // const typedWindow = window as typeof window & { radii: number[] };
       // if (!('radii' in window)) typedWindow.radii = [0, 0.5, 0.4, 0.7, 1, 1, 0.5, 1, 1, 0.7, 0.4, 0.5];
-      for (let p = 1; p <= item.points.length; p += 1) {
-        const p0 = item.points[p - 1];
-        const p1 = item.points[p % item.points.length];
+      for (let p = 1; p <= points.length; p += 1) {
+        const p0 = points[p - 1];
+        const p1 = points[p % points.length];
         // const radius = typedWindow.radii[p - 1];
         const radius = radii[p - 1];
         context.arcTo(p0.x, p0.y, p1.x, p1.y, item.radius * radius);
@@ -151,7 +153,7 @@ export class Heart extends Entity {
 
       // if (context.shadowBlur) context.shadowBlur = 0;
       // context.fillStyle = '#f0f';
-      // for (const point of this.points) {
+      // for (const point of points) {
       //   context.beginPath();
       //   context.arc(point.x, point.y, 2, 0, Math.PI * 2);
       //   context.fill();

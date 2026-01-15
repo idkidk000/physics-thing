@@ -8,6 +8,7 @@ import { Circle } from '@/lib/entity/circle';
 import { Heart } from '@/lib/entity/heart';
 import { Square } from '@/lib/entity/square';
 import { Star } from '@/lib/entity/star';
+import { MovingAverage } from '@/lib/moving-average';
 import { Utils } from '@/lib/utils';
 
 export class Simulation {
@@ -20,7 +21,14 @@ export class Simulation {
   #canvasRef: RefObject<HTMLCanvasElement | null>;
   #context: CanvasRenderingContext2D | null = null;
   #controller = new AbortController();
-  #timeDeltas: number[] = [];
+  #timeDeltas = new MovingAverage();
+  #simStepTimes = new MovingAverage();
+  #drawTimes = new MovingAverage();
+  #drawDebugTimes = new MovingAverage();
+  #entityStepTimes = new MovingAverage();
+  #entityCollideTimes = new MovingAverage();
+  #collisions = new MovingAverage();
+  #aabbTests = new MovingAverage();
   #light = new Vector({ x: 0, y: -1 });
   constructor(
     eventEmitter: EventEmitter<EventId>,
@@ -58,12 +66,51 @@ export class Simulation {
       else for (const item of this.#entities) item.rotation += 0.1;
     }, this.#controller.signal);
     eventEmitter.subscribe('add', () => this.addEntity(mouseRef.current), this.#controller.signal);
+    // biome-ignore format: no
+    eventEmitter.subscribe('tile', () => {
+      if (!this.#canvasRef.current) return;
+      const aspect = this.#canvasRef.current.width / this.#canvasRef.current.height;
+      const rows = Math.ceil(Math.sqrt(this.entities.length / aspect));
+      const cols = Math.ceil(this.entities.length / rows);
+      const xUnit = this.#canvasRef.current.width / cols;
+      const yUnit = this.#canvasRef.current.height / rows;
+      for (const [i, entity] of this.#entities.toSorted((a,b)=>b.radius-a.radius).entries()) {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        entity.position.set({
+          x : xUnit * (col + 0.5),
+          y : yUnit * (row + 0.5),
+        })
+        entity.zero();
+        entity.invalidatePoints()
+      }
+    }, this.#controller.signal);
+    // biome-ignore format: no
+    eventEmitter.subscribe('jumble', () => {
+      if (!this.#canvasRef.current) return;
+      for (const entity of this.#entities) {
+        entity.position.set({
+          x: Math.random() * this.#canvasRef.current.width,
+          y: Math.random() * this.#canvasRef.current.height,
+        });
+        entity.velocity
+          .set({
+            x: Math.random() - 0.5,
+            y: Math.random() - 0.5,
+          })
+          .unitEq()
+          .mult(Math.random() * 10);
+        entity.rotationalVelocity = Math.random() * 20 - 10;
+        entity.invalidatePoints()
+      }
+    }, this.#controller.signal);
   }
   destructor() {
     this.#controller.abort();
     (window as typeof window & { entities: null }).entities = null;
   }
   step(elapsedMillis: number) {
+    const started = performance.now();
     if (!this.#canvasRef.current) throw new Error('canvasRef is null');
     const rect = this.#canvasRef.current.getBoundingClientRect();
     const bounds = Point.round({ x: rect.width, y: rect.height });
@@ -91,10 +138,10 @@ export class Simulation {
 
     if (this.#activeEntity) {
       const { x, y } = this.#activeEntity.position;
-      this.#activeEntity.position.x = canvasMouse.x;
-      this.#activeEntity.position.y = canvasMouse.y;
+      this.#activeEntity.position.set(canvasMouse);
       const velocity = this.#activeEntity.position.sub({ x, y }).divEq(elapsedMillis);
       this.#activeEntity.velocity.addEq(velocity.multEq(this.#configRef.current.dragVelocity));
+      this.#activeEntity.invalidatePoints();
     } else if (this.#configRef.current.clickSpawn && this.#mouseRef.current.buttons) {
       this.addEntity(canvasMouse);
     }
@@ -118,22 +165,38 @@ export class Simulation {
     this.#light.rotateEq(this.#configRef.current.lightMotion * elapsedMillis * 0.0001);
 
     const physicsMillis = elapsedMillis / this.#configRef.current.physicsSteps;
+    let entityStepTime = 0;
+    let entityCollideTime = 0;
+    let collisions = 0;
+    let aabbTests = 0;
     for (let step = 0; step < this.#configRef.current.physicsSteps; ++step) {
-      for (const circle of this.#entities) circle.step(physicsMillis, bounds);
+      // sorting the array in place is slightly faster than sorting to a new array
+      this.#entities.sort((a, b) => a.aabb.min.x - b.aabb.min.x);
+      const entityStepStarted = performance.now();
+      for (const entity of this.#entities) entity.step(physicsMillis, bounds);
+      entityStepTime += performance.now() - entityStepStarted;
+      const entityCollideStarted = performance.now();
       // sweep and prune
-      // https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/23-SAP.html
-      // https://youtu.be/euypZDssYxE
-      const sorted = this.#entities.toSorted((a, b) => a.aabb.min.x - b.aabb.min.x);
-      for (let i = 0; i < sorted.length; ++i) {
-        const item = sorted[i];
-        for (let o = i + 1; o < sorted.length; ++o) {
-          const other = sorted[o];
-          if (other.aabb.min.x > item.aabb.max.x) break;
-          if (other.aabb.max.x < item.aabb.min.x || other.aabb.min.y > item.aabb.max.y || other.aabb.max.y < item.aabb.min.y) continue;
+      for (let i = 0; i < this.#entities.length; ++i) {
+        const item = this.#entities[i];
+        const itemAabb = item.aabb;
+        for (let o = i + 1; o < this.#entities.length; ++o) {
+          ++aabbTests;
+          const other = this.#entities[o];
+          const otherAabb = other.aabb;
+          if (otherAabb.min.x > itemAabb.max.x) break;
+          if (otherAabb.max.x < itemAabb.min.x || otherAabb.min.y > itemAabb.max.y || otherAabb.max.y < itemAabb.min.y) continue;
           item.collide(other);
+          ++collisions;
         }
       }
+      entityCollideTime += performance.now() - entityCollideStarted;
     }
+
+    this.#entityStepTimes.push(entityStepTime);
+    this.#entityCollideTimes.push(entityCollideTime);
+    this.#collisions.push(collisions);
+    this.#aabbTests.push(aabbTests);
 
     for (const [i, item] of this.#entities.entries()) {
       if (!item.dragging) ++item.age;
@@ -148,8 +211,10 @@ export class Simulation {
     }
 
     ++this.#steps;
+    this.#simStepTimes.push(performance.now() - started);
   }
   draw(elapsedMillis: number) {
+    const started = performance.now();
     if (!this.#canvasRef.current) throw new Error('canvasRef is null');
     const rect = this.#canvasRef.current.getBoundingClientRect();
     const bounds = Point.round({ x: rect.width, y: rect.height });
@@ -171,19 +236,10 @@ export class Simulation {
         Point.hypot2(Point.sub(light, { x: bounds.x, y: bounds.y }))
       )
     );
+
     this.#context.clearRect(0, 0, bounds.x, bounds.y);
     for (const item of this.#entities) item.draw(this.#context, light, maxLightDistance);
-    if (this.#configRef.current.showDebug) {
-      for (const item of this.#entities) item.drawDebug(this.#context);
-      this.#context.textAlign = 'right';
-      this.#context.textBaseline = 'top';
-      this.#context.fillStyle = '#ff0';
-      if (this.#timeDeltas.length === 100) this.#timeDeltas = [...this.#timeDeltas.slice(-99), elapsedMillis];
-      else this.#timeDeltas.push(elapsedMillis);
-      const avg = this.#timeDeltas.reduce((acc, item) => acc + item) / this.#timeDeltas.length;
-      this.#context.fillText(`${(1000 / avg).toFixed(1)}`, bounds.x, 0);
-      this.#context.fillText(this.entities.length.toLocaleString(), bounds.x, 10);
-    }
+
     if (this.#configRef.current.paused) {
       const prev = this.#context.font;
       this.#context.font = `${bounds.x / 10}px system-ui`;
@@ -193,11 +249,45 @@ export class Simulation {
       this.#context.fillStyle = style.color;
       this.#context.shadowBlur = 50;
       this.#context.shadowColor = style.backgroundColor;
+      // there doesn't seem to be a less bad way to make sure we have a very contrasty shadow
       this.#context.fillText('Paused', bounds.x / 2, bounds.y / 2);
       this.#context.fillText('Paused', bounds.x / 2, bounds.y / 2);
       this.#context.fillText('Paused', bounds.x / 2, bounds.y / 2);
       this.#context.shadowBlur = 0;
       this.#context.font = prev;
+    }
+
+    this.#drawTimes.push(performance.now() - started);
+    this.#timeDeltas.push(elapsedMillis);
+
+    if (this.#configRef.current.showDebug) {
+      const started = performance.now();
+      for (const item of this.#entities) item.drawDebug(this.#context);
+
+      const strings = [
+        `${(1000 / (this.#timeDeltas.avg ?? Infinity)).toFixed(1)} fps`,
+        `${this.entities.length.toLocaleString()} entities`,
+        `${this.#simStepTimes.avg?.toFixed(1)}ms sim step`,
+        `${this.#drawTimes.avg?.toFixed(1)}ms draw`,
+        `${this.#drawDebugTimes.avg?.toFixed(1)}ms debug`,
+        `${this.#entityStepTimes.avg?.toFixed(1)}ms ent step`,
+        `${this.#entityCollideTimes.avg?.toFixed(1)}ms collide`,
+        `${this.#collisions.avg?.toFixed(0)} collisions`,
+        `${this.#aabbTests.avg?.toFixed(0)} aabb tests`,
+      ];
+      const fontSize = 16;
+      const lineHeight = fontSize * 1.2;
+      const prev = this.#context.font;
+      this.#context.font = `${fontSize}px system-ui`;
+      const width = Math.max(...strings.map((string) => this.#context?.measureText(string).width ?? 0)) + fontSize;
+      this.#context.fillStyle = '#0007';
+      this.#context.fillRect(bounds.x - width, 0, width, lineHeight * strings.length);
+      this.#context.textAlign = 'right';
+      this.#context.textBaseline = 'top';
+      this.#context.fillStyle = '#ff0';
+      for (const [i, string] of strings.entries()) this.#context.fillText(string, bounds.x - fontSize * 0.5, lineHeight * i);
+      this.#context.font = prev;
+      this.#drawDebugTimes.push(performance.now() - started);
     }
   }
   get entities() {

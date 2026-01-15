@@ -43,6 +43,8 @@ const eventGroups = [
     { id: 'dump', keyName: 'd', label: 'Dump to console' },
     { id: 'reload', keyName: 'l', label: 'Reload renderer' },
     { id: 'showDebug', keyName: 'e', label: 'Toggle debug' },
+    { id: 'tile', keyName: 't', label: 'Tile' },
+    { id: 'jumble', keyName: 'j', label: 'Jumble' },
   ],
   [
     { id: 'defaults', keyName: 'c', label: 'Reset config', accent: true },

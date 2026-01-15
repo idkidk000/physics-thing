@@ -19,8 +19,6 @@ const shape: VectorLike[] = [
 
 export class Star extends Entity {
   #mass = 0;
-  /** invalidation key for `#points` */
-  #pointsPosition: PointLike | null = null;
   #points: PointLike[] | null = null;
   #aabb: AABBLike | null = null;
   constructor(...params: ConstructorParameters<typeof Entity>) {
@@ -32,7 +30,7 @@ export class Star extends Entity {
   }
   override set radius(value: number) {
     super.radius = value;
-    this.#pointsPosition = null;
+    this.invalidatePoints();
     this.#mass = polyArea(this);
   }
   override get radius(): number {
@@ -40,13 +38,13 @@ export class Star extends Entity {
   }
   override set rotation(value: number) {
     super.rotation = value;
-    this.#pointsPosition = null;
+    this.invalidatePoints();
   }
   override get rotation(): number {
     return super.rotation;
   }
   get aabb(): AABBLike {
-    if (!this.#aabb || !this.#pointsPosition || !Point.eq(this.#pointsPosition, this.position)) {
+    if (!this.#aabb) {
       let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
       for (const point of this.points) {
         minX = Math.min(minX, point.x);
@@ -62,9 +60,12 @@ export class Star extends Entity {
     return this.#aabb;
   }
   get points(): PointLike[] {
-    if (!this.#points || !this.#pointsPosition || !Point.eq(this.#pointsPosition, this.position))
-      this.#points = shape.map((vec) => Point.add(this.position, Vector.rotate(Vector.mult(vec, this.radius), this.cos, this.sin)));
+    if (!this.#points) this.#points = shape.map((vec) => Point.add(this.position, Vector.rotate(Vector.mult(vec, this.radius), this.cos, this.sin)));
     return this.#points;
+  }
+  invalidatePoints(): void {
+    this.#points = null;
+    this.#aabb = null;
   }
   draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void {
     Star.draw(this, context, light, maxLightDistance);
@@ -91,12 +92,13 @@ export class Star extends Entity {
       const lightDistanceRatio = lightDistance / maxLightDistance;
       const lightAngle = Vector.toRadians(lightOffset);
 
+      const points = item.points;
       context.beginPath();
-      context.moveTo(item.points[0].x, item.points[0].y);
-      for (let p = 2; p <= item.points.length + 1; p += 2) {
-        const p0 = item.points[p - 2];
-        const p1 = item.points[(p - 1) % item.points.length];
-        const p2 = item.points[p % item.points.length];
+      context.moveTo(points[0].x, points[0].y);
+      for (let p = 2; p <= points.length + 1; p += 2) {
+        const p0 = points[p - 2];
+        const p1 = points[(p - 1) % points.length];
+        const p2 = points[p % points.length];
         context.lineTo(p0.x, p0.y);
         context.arcTo(p1.x, p1.y, p2.x, p2.y, item.radius * 0.03);
         context.lineTo(p2.x, p2.y);

@@ -34,6 +34,8 @@ export class Circle extends Entity {
   get points(): PointLike[] {
     return [];
   }
+  // biome-ignore lint/suspicious/noEmptyBlockStatements: nothing to do
+  invalidatePoints(): void {}
   draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void {
     Circle.draw(this, context, light, maxLightDistance);
   }

@@ -5,8 +5,6 @@ import { Utils } from '@/lib/utils';
 
 export class Square extends Entity {
   #mass = 0;
-  /** invalidation key for `#points` */
-  #pointsPosition: PointLike | null = null;
   #points: PointLike[] | null = null;
   #aabb: AABBLike | null = null;
   constructor(...params: ConstructorParameters<typeof Entity>) {
@@ -19,20 +17,20 @@ export class Square extends Entity {
   override set radius(value: number) {
     super.radius = value;
     this.#mass = 4 * value ** 2;
-    this.#pointsPosition = null;
+    this.invalidatePoints();
   }
   override get radius(): number {
     return super.radius;
   }
   override set rotation(value: number) {
     super.rotation = value;
-    this.#pointsPosition = null;
+    this.invalidatePoints();
   }
   override get rotation(): number {
     return super.rotation;
   }
   get aabb(): AABBLike {
-    if (!this.#aabb || !this.#pointsPosition || !Point.eq(this.#pointsPosition, this.position)) {
+    if (!this.#aabb) {
       let [minX, minY, maxX, maxY] = [Infinity, Infinity, -Infinity, -Infinity];
       for (const point of this.points) {
         minX = Math.min(minX, point.x);
@@ -48,7 +46,7 @@ export class Square extends Entity {
     return this.#aabb;
   }
   get points(): PointLike[] {
-    if (!this.#points || !this.#pointsPosition || !Point.eq(this.#pointsPosition, this.position)) {
+    if (!this.#points) {
       const vTopLeft = Vector.rotate({ x: -this.radius, y: -this.radius }, this.cos, this.sin);
       this.#points = [
         Point.add(this.position, vTopLeft),
@@ -58,6 +56,10 @@ export class Square extends Entity {
       ];
     }
     return this.#points;
+  }
+  invalidatePoints(): void {
+    this.#points = null;
+    this.#aabb = null;
   }
   draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void {
     Square.draw(this, context, light, maxLightDistance);
