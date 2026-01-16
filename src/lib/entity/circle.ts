@@ -1,7 +1,7 @@
 import { ShadingType } from '@/hooks/config';
 import { type AABBLike, Point, type PointLike } from '@/lib/2d/core';
-import { Entity } from '@/lib/entity/base';
-import { Utils } from '@/lib/utils';
+import { Entity } from '@/lib/entity/base/entity';
+import * as Utils from '@/lib/utils';
 
 export class Circle extends Entity {
   #mass = 0;

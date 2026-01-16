@@ -2,7 +2,7 @@
 
 import { type MouseEvent, type TouchEvent, useCallback, useEffect, useId, useRef } from 'react';
 import { Button } from '@/components/button';
-import { Utils } from '@/lib/utils';
+import * as Utils from '@/lib/utils';
 
 export function Switch({
   value,
@@ -29,7 +29,7 @@ export function Switch({
   const sendUpdateIfChanged = useCallback((pointer: { clientX: number }) => {
     if (!trackRef.current) return;
     const rect = trackRef.current.getBoundingClientRect();
-    const nextValue = Boolean(Utils.clamp(Math.round((pointer.clientX - rect.x) / rect.width), 0, 1));
+    const nextValue = !!(Utils.clamp(Math.round((pointer.clientX - rect.x) / rect.width), 0, 1));
     if (nextValue !== valueRef.current) onValueChange(nextValue);
   }, [onValueChange]);
 
@@ -48,7 +48,9 @@ export function Switch({
 
   return (
     <div className='flex flex-row gap-4 items-center flex-wrap'>
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id} className='grow'>
+        {label}
+      </label>
       <Button
         id={id}
         type='button'

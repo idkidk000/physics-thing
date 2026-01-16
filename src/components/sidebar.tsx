@@ -1,3 +1,4 @@
+import { homepage } from '@root/package.json';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/button';
 import { type RadioOption, RadioSlider, RadioSwitch } from '@/components/radio';
@@ -5,9 +6,9 @@ import { Range, RangeTwo } from '@/components/range';
 import { Switch } from '@/components/switch';
 import { VectorPicker } from '@/components/vector-picker';
 import { ColourSchemeType, EntityType, ShadingType, useConfig } from '@/hooks/config';
-import { HotKeys, useEvent } from '@/hooks/event';
+import { EventButtons, useEvent } from '@/hooks/event';
 import type { VectorLike } from '@/lib/2d/core';
-import { Utils } from '@/lib/utils';
+import * as Utils from '@/lib/utils';
 
 const shadingOptions: RadioOption[] = Utils.enumEntries(ShadingType).map(([key, value]) => ({ label: Utils.pascalToSentenceCase(key), value }));
 const entityOptions: RadioOption[] = Utils.enumEntries(EntityType).map(([key, value]) => ({ label: Utils.pascalToSentenceCase(key), value }));
@@ -183,11 +184,11 @@ export function Sidebar() {
 
           <hr />
 
-          <HotKeys />
+          <EventButtons />
 
           <hr />
 
-          <a href='https://github.com/idkidk000/physics-thing' target='_blank' rel='noopener noreferrer' className='flex flex-row gap-2 mx-auto'>
+          <a href={homepage} target='_blank' rel='noopener noreferrer' className='flex flex-row gap-2 mx-auto'>
             Source
             {/* from https://lucide.dev/icons/github */}
             <svg

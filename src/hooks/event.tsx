@@ -94,7 +94,7 @@ export function useEvent() {
   return context;
 }
 
-function HotKey({
+function EventButton({
   id,
   keyName: key,
   label,
@@ -131,7 +131,7 @@ function HotKey({
   );
 }
 
-export function HotKeys({ className }: { className?: string }) {
+export function EventButtons({ className }: { className?: string }) {
   return (
     <div className='flex flex-col gap-4'>
       {eventGroups
@@ -142,7 +142,7 @@ export function HotKeys({ className }: { className?: string }) {
             {group
               .filter((event) => !('hidden' in event))
               .map((event) => (
-                <HotKey key={event.id} {...event} className={className} />
+                <EventButton key={event.id} {...event} className={className} />
               ))}
           </div>
         ))}

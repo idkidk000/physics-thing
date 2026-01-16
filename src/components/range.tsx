@@ -1,6 +1,6 @@
 import { type ChangeEvent, type CSSProperties, type MouseEvent, type TouchEvent, useCallback, useEffect, useId, useMemo, useRef } from 'react';
 import { Button } from '@/components/button';
-import { Utils } from '@/lib/utils';
+import * as Utils from '@/lib/utils';
 
 /** for picking a single value from a range */
 export function Range({

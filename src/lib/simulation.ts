@@ -3,13 +3,40 @@ import { type MouseState, MouseStateEvent } from '@/hooks/canvas';
 import { type Config, EntityType } from '@/hooks/config';
 import type { EventEmitter, EventId } from '@/hooks/event';
 import { Point, type PointLike, Vector } from '@/lib/2d/core';
-import type { Entity } from '@/lib/entity/base';
+import type { Entity } from '@/lib/entity/base/entity';
 import { Circle } from '@/lib/entity/circle';
 import { Heart } from '@/lib/entity/heart';
+import { Hex } from '@/lib/entity/hex';
 import { Square } from '@/lib/entity/square';
 import { Star } from '@/lib/entity/star';
+import { Tri } from '@/lib/entity/tri';
 import { MovingAverage } from '@/lib/moving-average';
-import { Utils } from '@/lib/utils';
+import * as Utils from '@/lib/utils';
+
+const MAX_ENTITIES = 100;
+
+const entityClasses: Record<EntityType, new (...params: ConstructorParameters<typeof Entity>) => Entity> = {
+  [EntityType.Circle]: Circle,
+  [EntityType.Heart]: Heart,
+  [EntityType.Hex]: Hex,
+  [EntityType.Square]: Square,
+  [EntityType.Star]: Star,
+  [EntityType.Tri]: Tri,
+};
+
+enum SortType {
+  Fit,
+  NameThenHue,
+  NameThenRadius,
+}
+
+const sortTypes = Utils.enumEntries(SortType).map(([, value]) => value);
+
+const sortFunctions: Record<SortType, (a: Entity, b: Entity) => number> = {
+  [SortType.Fit]: (a, b) => a.radius - b.radius,
+  [SortType.NameThenHue]: (a, b) => a.constructor.name.localeCompare(b.constructor.name) || a.hue - b.hue,
+  [SortType.NameThenRadius]: (a, b) => a.constructor.name.localeCompare(b.constructor.name) || a.radius - b.radius,
+};
 
 export class Simulation {
   #entities: Entity[] = [];
@@ -21,6 +48,13 @@ export class Simulation {
   #canvasRef: RefObject<HTMLCanvasElement | null>;
   #context: CanvasRenderingContext2D | null = null;
   #controller = new AbortController();
+  #light = new Vector({ x: 0, y: -1 });
+  /** used to mod options.length to get an equal distribution of selected types */
+  #addedEntities = 0;
+  /** used in `tile` event handler */
+  #sortType: SortType = sortTypes[0];
+
+  // debug
   #timeDeltas = new MovingAverage();
   #simStepTimes = new MovingAverage();
   #drawTimes = new MovingAverage();
@@ -29,7 +63,7 @@ export class Simulation {
   #entityCollideTimes = new MovingAverage();
   #collisions = new MovingAverage();
   #aabbTests = new MovingAverage();
-  #light = new Vector({ x: 0, y: -1 });
+
   constructor(
     eventEmitter: EventEmitter<EventId>,
     configRef: RefObject<Config>,
@@ -74,16 +108,32 @@ export class Simulation {
       const cols = Math.ceil(this.entities.length / rows);
       const xUnit = this.#canvasRef.current.width / cols;
       const yUnit = this.#canvasRef.current.height / rows;
-      for (const [i, entity] of this.#entities.toSorted((a,b)=>b.radius-a.radius).entries()) {
-        const row = Math.floor(i / cols);
-        const col = i % cols;
-        entity.position.set({
-          x : xUnit * (col + 0.5),
-          y : yUnit * (row + 0.5),
-        })
-        entity.zero();
-        entity.invalidatePoints()
+      const sorted = this.#entities.toSorted(sortFunctions[this.#sortType]);
+      if (this.#sortType===SortType.Fit) {
+        for (let i = 0; i < Math.ceil(sorted.length / 2) * 2; ++i) {
+          const ix = i & 1 ? sorted.length - i - (sorted.length & 1) : i;
+          if (ix < 0) continue;
+          const item = sorted[ix];
+          const row = Math.floor(i / cols);
+          const col = i % cols;
+          item.position.set({
+            x: xUnit * (col + 0.5),
+            y: yUnit * (row + 0.5),
+          });
+          item.zero();
+        }
+      } else {
+        for (const [i,item] of sorted.entries()) {
+          const row = Math.floor(i / cols);
+          const col = i % cols;
+          item.position.set({
+            x: xUnit * (col + 0.5),
+            y: yUnit * (row + 0.5),
+          });
+          item.zero();
+        }
       }
+      this.#sortType=(this.#sortType+1)%sortTypes.length
     }, this.#controller.signal);
     // biome-ignore format: no
     eventEmitter.subscribe('jumble', () => {
@@ -100,9 +150,19 @@ export class Simulation {
           })
           .unitEq()
           .mult(Math.random() * 10);
-        entity.rotationalVelocity = Math.random() * 20 - 10;
-        entity.invalidatePoints()
-      }
+          entity.rotationalVelocity = Math.random() * 20 - 10;
+        }
+      }, this.#controller.signal);
+    // biome-ignore format: no
+    eventEmitter.subscribe('showDebug', () => {
+      this.#timeDeltas.clear();
+      this.#simStepTimes.clear();
+      this.#drawTimes.clear();
+      this.#drawDebugTimes.clear();
+      this.#entityStepTimes.clear();
+      this.#entityCollideTimes.clear();
+      this.#collisions.clear();
+      this.#aabbTests.clear();
     }, this.#controller.signal);
   }
   destructor() {
@@ -141,7 +201,6 @@ export class Simulation {
       this.#activeEntity.position.set(canvasMouse);
       const velocity = this.#activeEntity.position.sub({ x, y }).divEq(elapsedMillis);
       this.#activeEntity.velocity.addEq(velocity.multEq(this.#configRef.current.dragVelocity));
-      this.#activeEntity.invalidatePoints();
     } else if (this.#configRef.current.clickSpawn && this.#mouseRef.current.buttons) {
       this.addEntity(canvasMouse);
     }
@@ -170,19 +229,17 @@ export class Simulation {
     let collisions = 0;
     let aabbTests = 0;
     for (let step = 0; step < this.#configRef.current.physicsSteps; ++step) {
-      // sorting the array in place is slightly faster than sorting to a new array
-      this.#entities.sort((a, b) => a.aabb.min.x - b.aabb.min.x);
+      const sorted = this.#entities.toSorted((a, b) => a.aabb.min.x - b.aabb.min.x);
       const entityStepStarted = performance.now();
-      for (const entity of this.#entities) entity.step(physicsMillis, bounds);
+      for (const entity of sorted) entity.step(physicsMillis, bounds);
       entityStepTime += performance.now() - entityStepStarted;
       const entityCollideStarted = performance.now();
       // sweep and prune
-      for (let i = 0; i < this.#entities.length; ++i) {
-        const item = this.#entities[i];
+      for (const [i, item] of sorted.entries()) {
         const itemAabb = item.aabb;
-        for (let o = i + 1; o < this.#entities.length; ++o) {
+        for (let o = i + 1; o < sorted.length; ++o) {
           ++aabbTests;
-          const other = this.#entities[o];
+          const other = sorted[o];
           const otherAabb = other.aabb;
           if (otherAabb.min.x > itemAabb.max.x) break;
           if (otherAabb.max.x < itemAabb.min.x || otherAabb.min.y > itemAabb.max.y || otherAabb.max.y < itemAabb.min.y) continue;
@@ -267,13 +324,13 @@ export class Simulation {
       const strings = [
         `${(1000 / (this.#timeDeltas.avg ?? Infinity)).toFixed(1)} fps`,
         `${this.entities.length.toLocaleString()} entities`,
-        `${this.#simStepTimes.avg?.toFixed(1)}ms sim step`,
-        `${this.#drawTimes.avg?.toFixed(1)}ms draw`,
-        `${this.#drawDebugTimes.avg?.toFixed(1)}ms debug`,
-        `${this.#entityStepTimes.avg?.toFixed(1)}ms ent step`,
-        `${this.#entityCollideTimes.avg?.toFixed(1)}ms collide`,
-        `${this.#collisions.avg?.toFixed(0)} collisions`,
-        `${this.#aabbTests.avg?.toFixed(0)} aabb tests`,
+        `${this.#simStepTimes.format(1)} ms sim step`,
+        `${this.#entityStepTimes.format(1)} ms ent step`,
+        `${this.#entityCollideTimes.format(1)} ms collide`,
+        `${this.#drawTimes.format(1)} ms draw`,
+        `${this.#collisions.format(0)} collisions`,
+        `${this.#aabbTests.format(0)} aabb tests`,
+        `${this.#drawDebugTimes.format(1)} ms debug`,
       ];
       const fontSize = 16;
       const lineHeight = fontSize * 1.2;
@@ -281,11 +338,11 @@ export class Simulation {
       this.#context.font = `${fontSize}px system-ui`;
       const width = Math.max(...strings.map((string) => this.#context?.measureText(string).width ?? 0)) + fontSize;
       this.#context.fillStyle = '#0007';
-      this.#context.fillRect(bounds.x - width, 0, width, lineHeight * strings.length);
+      this.#context.fillRect(bounds.x - width, 0, width, lineHeight * (strings.length + 1));
       this.#context.textAlign = 'right';
       this.#context.textBaseline = 'top';
       this.#context.fillStyle = '#ff0';
-      for (const [i, string] of strings.entries()) this.#context.fillText(string, bounds.x - fontSize * 0.5, lineHeight * i);
+      for (const [i, string] of strings.entries()) this.#context.fillText(string, bounds.x - fontSize * 0.5, lineHeight * (i + 0.5));
       this.#context.font = prev;
       this.#drawDebugTimes.push(performance.now() - started);
     }
@@ -327,21 +384,10 @@ export class Simulation {
     const options = Utils.enumEntries(EntityType)
       .map(([, value]) => value)
       .filter((value) => value & this.#configRef.current.entityType);
-    const selected = options[Math.floor(Math.random() * options.length - 0.00001)];
-    const entity =
-      selected === EntityType.Circle
-        ? new Circle(...params)
-        : selected === EntityType.Square
-          ? new Square(...params)
-          : selected === EntityType.Heart
-            ? new Heart(...params)
-            : selected === EntityType.Star
-              ? new Star(...params)
-              : null;
-    if (entity === null) throw new Error(`Simulation.addEntity has no handler for EntityType ${selected}`);
-
+    const selected = options[this.#addedEntities++ % options.length];
+    const entity = new entityClasses[selected](...params);
     // don't replace this.#entities as we've given a ref to Window
-    if (this.#entities.length === 100) this.#entities.splice(0, 1);
+    if (this.#entities.length === MAX_ENTITIES) this.#entities.splice(0, 1);
     this.#entities.push(entity);
     return entity;
   }

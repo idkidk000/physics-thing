@@ -1,7 +1,7 @@
 import { type CSSProperties, type MouseEvent, type TouchEvent, useCallback, useEffect, useId, useMemo, useRef } from 'react';
 import { Button } from '@/components/button';
 import { Switch } from '@/components/switch';
-import { Utils } from '@/lib/utils';
+import * as Utils from '@/lib/utils';
 
 export interface RadioOption {
   value: number;
@@ -109,6 +109,7 @@ export function RadioSlider({
   // biome-ignore format: no
   const trackStyle = useMemo(() => ({
     '--percent-to': `${(100 / options.length) * (options.findIndex((option) => option.value === value) + 0.5)}%`,
+    gridColumn: `span ${options.length} / span ${options.length}`,
   }), [options.findIndex, options.length, value]) as CSSProperties;
 
   // biome-ignore format: no
@@ -141,7 +142,7 @@ export function RadioSlider({
       </div>
       <div
         role='radiogroup'
-        className='slider-track col-span-3 relative bg-transparent mb-2 touch-none transition-[--percent-to]'
+        className='slider-track relative mb-2 touch-none transition-[--percent-to]'
         onClick={sendUpdateIfChanged}
         onMouseMove={handleMouseMove}
         onTouchMove={handleTouchMove}

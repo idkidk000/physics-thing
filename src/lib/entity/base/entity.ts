@@ -2,9 +2,7 @@
 import type { RefObject } from 'react';
 import type { Config } from '@/hooks/config';
 import { AABB, type AABBLike, Point, type PointLike, Vector, type VectorLike } from '@/lib/2d/core';
-import { circleIntersectsCircle, circleIntersectsPoly, pointInCircle, pointInPoly, polyIntersectsPoly } from '@/lib/2d/helpers';
-
-const localeCfg = [undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 }] as const;
+import * as Helpers from '@/lib/2d/helpers';
 
 export abstract class Entity {
   #radius;
@@ -20,7 +18,7 @@ export abstract class Entity {
   #velocity: Vector;
   #cos: number | null = null;
   #sin: number | null = null;
-  #collisions: { at: number; colllision: VectorLike; velocity: VectorLike }[] = [];
+  #collisions: { at: number; colllision: VectorLike }[] = [];
   // biome-ignore lint/correctness/noUnusedPrivateClassMembers: biome bug
   #collisionTime = 0;
 
@@ -143,15 +141,8 @@ export abstract class Entity {
   abstract get mass(): number;
   abstract get aabb(): AABBLike;
   abstract get points(): PointLike[];
-  /** `static abstract` isn't valid syntax, but implement a `static` draw method and call it from an instanced method of the same name */
+  /** `static abstract` isn't valid syntax, but implement a static `draw` method and call it from an instanced method of the same name */
   abstract draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void;
-  /** an extremely grim workaround to simplify abstract points and aabb cached getters. but it's very good for performance and hooking `Point` would be worse
-   *
-   * **MUST BE CALLED AFTER UPDATING POSITION**
-   *
-   * rotation and radius are hooked already since they're just plain number properties
-   */
-  abstract invalidatePoints(): void;
 
   contains(point: PointLike): boolean {
     return Entity.contains(this, point);
@@ -176,17 +167,17 @@ export abstract class Entity {
   }
 
   static contains(item: Entity, point: PointLike): boolean {
-    return AABB.contains(item.aabb, point) && (item.points.length ? pointInPoly(point, item) : pointInCircle(point, item));
+    return AABB.contains(item.aabb, point) && (item.points.length ? Helpers.pointInPoly(point, item) : Helpers.pointInCircle(point, item));
   }
   static intersects(item: Entity, other: Entity): false | PointLike {
     // AABB intersection has already been tested by simulation.step
     // if (!AABB.intersects(this.aabb, other.aabb)) return false;
     const itemPoints = item.points;
     const otherPoints = other.points;
-    if (itemPoints.length && otherPoints.length) return polyIntersectsPoly(item, other);
-    if (itemPoints.length) return circleIntersectsPoly(other, item);
-    if (otherPoints.length) return circleIntersectsPoly(item, other);
-    return circleIntersectsCircle(item, other);
+    if (itemPoints.length && otherPoints.length) return Helpers.polyIntersectsPoly(item, other);
+    if (itemPoints.length) return Helpers.circleIntersectsPoly(other, item);
+    if (otherPoints.length) return Helpers.circleIntersectsPoly(item, other);
+    return Helpers.circleIntersectsCircle(item, other);
   }
   static collide(item: Entity, other: Entity): void {
     const started = performance.now();
@@ -204,7 +195,7 @@ export abstract class Entity {
 
     // if (normalVelocityDp > 0) return;
 
-    if (item.configRef.current.showDebug) item.#collisions.push({ at: item.#age, colllision: collisionVector, velocity: velocityVector });
+    if (item.configRef.current.showDebug) item.#collisions.push({ at: item.#age, colllision: collisionVector });
 
     const impulse = Math.max(
       item.configRef.current.minImpulse,
@@ -216,19 +207,15 @@ export abstract class Entity {
     if (!other.fixed) other.velocity.addEq(Vector.div(impulseVector, other.mass)).multEq(item.configRef.current.collideVelocityRatio);
 
     // actively move collliders out of static objects by 1 unit
-    if (other.fixed && !item.fixed) {
-      item.position.subEq(collisionNormal);
-      item.invalidatePoints();
-    }
-    if (item.fixed && !other.fixed) {
-      other.position.addEq(collisionNormal);
-      other.invalidatePoints();
-    }
+    if (other.fixed && !item.fixed) item.position.subEq(collisionNormal);
+    if (item.fixed && !other.fixed) other.position.addEq(collisionNormal);
 
-    const perpendicularDp = Vector.dot(Vector.rotate(Vector.unit(velocityVector), Math.PI * 0.5), collisionNormal);
-    // TODO: this should be derived from velocityVector hypot, hypot of each object to collision point (like gears), and mass of each object (share of imparted rotational velocity)
-    item.rotationalVelocity += (impulse / item.mass) * perpendicularDp * item.configRef.current.collideRotationalVelocityRatio;
-    other.rotationalVelocity -= (impulse / other.mass) * perpendicularDp * item.configRef.current.collideRotationalVelocityRatio;
+    // this part is completely vibes-based
+    const velocity = Vector.hypot(velocityVector);
+    const perpendicularDp = Vector.dot(Vector.rotate(Vector.div(velocityVector, velocity || 1), Math.PI * 0.5), collisionNormal);
+    const rotationalImpulse = (velocity / (item.radius + other.radius)) * perpendicularDp * 0.1 * item.configRef.current.collideRotationalVelocityRatio;
+    item.rotationalVelocity -= rotationalImpulse * item.radius;
+    other.rotationalVelocity += rotationalImpulse * other.radius;
 
     item.#collisionTime += performance.now() - started;
   }
@@ -237,36 +224,37 @@ export abstract class Entity {
     if (!item.#dragging && !item.#fixed) {
       item.velocity.addEq(Vector.mult(config.gravity, millis * 0.0002));
       item.position.addEq(item.velocity.mult(millis));
-      item.invalidatePoints();
       item.rotation += item.rotationalVelocity * 0.01;
     }
 
-    // TODO: do rotational velocity properly
-    let hit = false;
     const aabb = item.aabb;
-    if (aabb.min.x < 0) {
-      item.position.x -= aabb.min.x;
-      item.velocity.x *= -config.collideVelocityRatio;
-      hit = true;
-    } else if (aabb.max.x > bounds.x) {
-      item.position.x -= aabb.max.x - bounds.x;
-      item.velocity.x *= -config.collideVelocityRatio;
-      hit = true;
-    }
+    let [hitX, hitY] = [true, true];
 
-    if (aabb.min.y < 0) {
-      item.position.y -= aabb.min.y;
-      item.velocity.y *= -config.collideVelocityRatio;
-      hit = true;
-    } else if (aabb.max.y > bounds.y) {
-      item.position.y -= aabb.max.y - bounds.y;
-      item.velocity.y *= -config.collideVelocityRatio;
-      hit = true;
+    if (aabb.min.x < 0) item.position.x -= aabb.min.x;
+    else if (aabb.max.x > bounds.x) item.position.x -= aabb.max.x - bounds.x;
+    else hitX = false;
+
+    if (aabb.min.y < 0) item.position.y -= aabb.min.y;
+    else if (aabb.max.y > bounds.y) item.position.y -= aabb.max.y - bounds.y;
+    else hitY = false;
+
+    if (hitX) item.velocity.x *= -config.collideVelocityRatio;
+    if (hitY) item.velocity.y *= -config.collideVelocityRatio;
+
+    if (hitX || hitY) {
+      for (const point of item.points) {
+        if (point.x < 0) item.rotationalVelocity -= ((point.y - item.position.y) / item.radius) * 0.1 * item.configRef.current.collideRotationalVelocityRatio;
+        else if (point.x > bounds.x)
+          item.rotationalVelocity += ((point.y - item.position.y) / item.radius) * 0.1 * item.configRef.current.collideRotationalVelocityRatio;
+        else if (point.y < 0)
+          item.rotationalVelocity += ((point.x - item.position.x) / item.radius) * 0.1 * item.configRef.current.collideRotationalVelocityRatio;
+        else if (point.y > bounds.y)
+          item.rotationalVelocity -= ((point.x - item.position.x) / item.radius) * 0.1 * item.configRef.current.collideRotationalVelocityRatio;
+      }
     }
 
     item.velocity.multEq(config.stepVelocityRatio);
-    item.rotationalVelocity *= config.rotationalVelocityRatio * (hit ? config.collideRotationalVelocityRatio : 1);
-    if (hit) item.invalidatePoints();
+    item.rotationalVelocity *= config.rotationalVelocityRatio;
   }
   static drawDebug(item: Entity, context: CanvasRenderingContext2D): void {
     context.strokeStyle = '#0f0';
@@ -275,13 +263,14 @@ export abstract class Entity {
     context.fillStyle = '#0f0';
     context.textBaseline = 'bottom';
     context.textAlign = 'right';
+    // `Number.prototype.toLocaleString` is very slow in firefox
     context.fillText(
-      `{ x: ${item.velocity.x.toLocaleString(...localeCfg)}, y: ${item.velocity.y.toLocaleString(...localeCfg)}, r: ${item.rotationalVelocity.toLocaleString(...localeCfg)} }${item.fixed ? ' f' : ''} ${item.#collisionTime.toLocaleString(...localeCfg)}`,
+      `{ x: ${item.velocity.x.toFixed(2)}, y: ${item.velocity.y.toFixed(2)}, r: ${item.rotationalVelocity.toFixed(2)} }${item.fixed ? ' f' : ''} ${item.#collisionTime.toFixed(1)}ms`,
       aabb.max.x,
       aabb.min.y
     );
     if (item.#collisions.length) {
-      context.strokeStyle = '#f00';
+      context.strokeStyle = '#ff0';
       context.beginPath();
       for (const { colllision } of item.#collisions) {
         context.moveTo(item.position.x, item.position.y);
@@ -289,25 +278,28 @@ export abstract class Entity {
         context.lineTo(endPoint.x, endPoint.y);
       }
       context.stroke();
-
-      context.strokeStyle = '#f70';
-      context.beginPath();
-      for (const { velocity } of item.#collisions) {
-        context.moveTo(item.position.x, item.position.y);
-        const endPoint = Point.add(item.position, velocity);
-        context.lineTo(endPoint.x, endPoint.y);
-      }
-      context.stroke();
     }
     const points = item.points;
+    context.strokeStyle = '#f0f';
+    context.fillStyle = '#f0f';
     if (points.length) {
-      context.strokeStyle = '#f0f';
       context.beginPath();
       context.moveTo(points[0].x, points[0].y);
-      for (const point of points.slice(1)) context.lineTo(point.x, point.y);
-      context.closePath();
+      for (const point of [...points.slice(1), points[0]]) context.lineTo(point.x, point.y);
+      context.stroke();
+      for (const point of points) {
+        context.beginPath();
+        context.arc(point.x, point.y, 3, 0, Math.PI * 2);
+        context.fill();
+      }
+    } else {
+      context.beginPath();
+      context.arc(item.position.x, item.position.y, item.radius, 0, Math.PI * 2);
       context.stroke();
     }
+    context.beginPath();
+    context.arc(item.position.x, item.position.y, 5, 0, Math.PI * 2);
+    context.fill();
   }
   static zero(item: Entity): void {
     item.velocity.set({ x: 0, y: 0 });

@@ -22,7 +22,7 @@ export function pointInPoly(point: PointLike, poly: PolyLike, stablePoints?: Poi
 export function circleIntersectsCircle(a: CircleLike, b: CircleLike): PointLike | false {
   const vec = Vector.sub(b.position, a.position);
   if (Vector.hypot2(vec) >= (a.radius + b.radius) ** 2) return false;
-  return Point.add(a.position, Vector.mult(vec, 0.5));
+  return Point.add(a.position, Vector.mult(vec, a.radius / (a.radius + b.radius)));
 }
 
 export function circleIntersectsPoly(circle: CircleLike, poly: PolyLike): PointLike | false {

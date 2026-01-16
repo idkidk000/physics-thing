@@ -23,9 +23,11 @@ export enum ShadingType {
 /** bits */
 export enum EntityType {
   Circle = 1,
-  Square = 2,
-  Heart = 4,
-  Star = 8,
+  Heart = 2,
+  Hex = 4,
+  Square = 8,
+  Star = 16,
+  Tri = 32,
 }
 
 export enum ColourSchemeType {
@@ -64,15 +66,15 @@ export interface Config {
 export const defaultConfig: Config = {
   clickSpawn: false,
   collideRotationalVelocityRatio: 0.99,
-  collideVelocityRatio: 0.997,
+  collideVelocityRatio: 0.998,
   colourScheme: ColourSchemeType.Dark,
   dragVelocity: 0.25,
   drawBlur: false,
   entityType: EntityType.Circle | EntityType.Square | EntityType.Heart | EntityType.Star,
   gravity: { x: 0, y: 0 },
-  hueCenter: 280,
-  hueRange: 60,
-  initialEntities: 20,
+  hueCenter: 215,
+  hueRange: 75,
+  initialEntities: 60,
   lightMotion: 10,
   maxAge: 0,
   minImpulse: 10,
@@ -80,11 +82,11 @@ export const defaultConfig: Config = {
   physicsSteps: 5,
   radiusMax: 70,
   radiusMin: 20,
-  restitutionCoefficient: 0.997,
-  rotationalVelocityRatio: 0.997,
+  restitutionCoefficient: 0.998,
+  rotationalVelocityRatio: 0.998,
   shadingType: ShadingType.TwoTone,
   showDebug: false,
-  stepVelocityRatio: 0.997,
+  stepVelocityRatio: 0.998,
 };
 
 interface Context {

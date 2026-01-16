@@ -36,6 +36,7 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   y: number;
   // actually returns ThisType<Interface> but it doesn't simplify to Point or Vector
   #typedConstructor = this.constructor as new (...params: ConstructorParameters<typeof PointOrVector<PointOrVectorLike>>) => this;
+  #callback: (() => void) | null = null;
   constructor(...params: [x: number, y: number] | [object: PointOrVectorLike]) {
     if (params.length === 2 && typeof params[0] === 'number' && typeof params[1] === 'number') {
       this.x = params[0];
@@ -44,6 +45,10 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
       this.x = params[0].x;
       this.y = params[0].y;
     } else throw new Error('invalid constructor params');
+  }
+
+  hook(callback: () => void) {
+    this.#callback = callback;
   }
 
   add(other: Interface): this {
@@ -76,60 +81,81 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   roundTo(digits: number): this {
     return new this.#typedConstructor(PointOrVector.roundTo(this, digits));
   }
+  lerp(other: Interface, ratio: number): this {
+    return new this.#typedConstructor(PointOrVector.lerp(this, other, ratio));
+  }
+
   set(value: Interface): this {
     this.x = value.x;
     this.y = value.y;
+    this.#callback?.();
     return this;
   }
 
   addEq(other: Interface): this {
     const { x, y } = PointOrVector.add(this, other);
     [this.x, this.y] = [x, y];
+    this.#callback?.();
     return this;
   }
   subEq(other: Interface): this {
     const { x, y } = PointOrVector.sub(this, other);
     [this.x, this.y] = [x, y];
+    this.#callback?.();
     return this;
   }
   multEq(...[param]: [value: number] | [other: Interface]): this {
     const { x, y } = PointOrVector.mult(...([this, param] as [PointOrVectorLike, PointOrVectorLike] | [PointOrVectorLike, number]));
     [this.x, this.y] = [x, y];
+    this.#callback?.();
     return this;
   }
   divEq(value: number): this {
     const { x, y } = PointOrVector.div(this, value);
     [this.x, this.y] = [x, y];
+    this.#callback?.();
     return this;
   }
   floorEq(): this {
     const { x, y } = PointOrVector.floor(this);
     [this.x, this.y] = [x, y];
+    this.#callback?.();
     return this;
   }
   ceilEq(): this {
     const { x, y } = PointOrVector.ceil(this);
     [this.x, this.y] = [x, y];
+    this.#callback?.();
     return this;
   }
   roundEq(): this {
     const { x, y } = PointOrVector.round(this);
     [this.x, this.y] = [x, y];
+    this.#callback?.();
     return this;
   }
   truncEq(): this {
     const { x, y } = PointOrVector.trunc(this);
     [this.x, this.y] = [x, y];
+    this.#callback?.();
     return this;
   }
   clampEq(...params: [min: Interface, max: Interface] | [aabb: AABBLike]): this {
     const { x, y } = PointOrVector.clamp(this, ...params);
     [this.x, this.y] = [x, y];
+    this.#callback?.();
     return this;
   }
   roundToEq(digits: number): this {
     const { x, y } = PointOrVector.roundTo(this, digits);
     [this.x, this.y] = [x, y];
+    this.#callback?.();
+    return this;
+  }
+  lerpEq(other: Interface, ratio: number): this {
+    const { x, y } = PointOrVector.lerp(this, other, ratio);
+    [this.x, this.y] = [x, y];
+    this.#callback?.();
     return this;
   }
 
@@ -189,6 +215,12 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   static roundTo(item: PointOrVectorLike, digits: number): PointOrVectorLike {
     const multiplier = 10 ** digits;
     return { x: Math.round(item.x * multiplier) / multiplier, y: Math.round(item.y * multiplier) / multiplier };
+  }
+  static lerp(item: PointOrVectorLike, other: PointOrVectorLike, ratio: number): PointOrVectorLike {
+    return {
+      x: item.x + (other.x - item.x) * ratio,
+      y: item.y + (other.y - item.y) * ratio,
+    };
   }
 
   static hypot2(...params: [item: PointOrVectorLike] | [item: PointOrVectorLike, other: PointOrVectorLike]): number {
@@ -325,7 +357,7 @@ export class Line implements LineLike {
       : undefined;
   }
 
-  static is(item: unknown): item is Line {
+  static is(item: unknown): item is LineLike {
     return typeof item === 'object' && item !== null && 'a' in item && 'b' in item && PointOrVector.is(item.a) && PointOrVector.is(item.b);
   }
 }

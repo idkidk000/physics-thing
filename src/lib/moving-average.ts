@@ -21,4 +21,13 @@ export class MovingAverage {
     if (this.#length === 0) return undefined;
     return (this.#length === this.#array.length ? this.#array : this.#array.slice(0, this.#length)).reduce((acc, item) => acc + item, 0) / this.#length;
   }
+  get p99(): number | undefined {
+    if (this.#length === 0) return undefined;
+    const sorted = (this.#length === this.#array.length ? this.#array : this.#array.slice(0, this.#length)).toSorted((a, b) => a - b);
+    const slice = sorted.slice(Math.floor(sorted.length * 0.99));
+    return slice.reduce((acc, item) => acc + item, 0) / slice.length;
+  }
+  format(digits = 1): string {
+    return `${this.avg?.toFixed(digits) ?? '-'} [${this.p99?.toFixed(digits) ?? '-'}]`;
+  }
 }
