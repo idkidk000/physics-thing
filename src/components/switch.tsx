@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/a11y/useSemanticElements: no */
 
-import { type MouseEvent, type TouchEvent, useCallback, useEffect, useId, useRef } from 'react';
+import { type CSSProperties, type MouseEvent, type TouchEvent, useCallback, useEffect, useId, useMemo, useRef } from 'react';
 import { Button } from '@/components/button';
 import * as Utils from '@/lib/utils';
 
@@ -46,6 +46,11 @@ export function Switch({
     sendUpdateIfChanged(event.touches[0]);
   }, [sendUpdateIfChanged]);
 
+  // biome-ignore format: no
+  const style = useMemo(() => ({
+      '--percent-to': value ? '100%' : '0%',
+    }), [value]) as CSSProperties;
+
   return (
     <div className='flex flex-row gap-4 items-center flex-wrap'>
       <label htmlFor={id} className='grow'>
@@ -54,14 +59,15 @@ export function Switch({
       <Button
         id={id}
         type='button'
-        className='h-4 w-10 rounded-full m-0 p-0 justify-center transition-colors bg-background aria-checked:bg-accent group border-2 text-foreground touch-none'
+        className='h-4 w-10 rounded-full m-0 p-0 justify-center transition-[--percent-to] slider-track group border-2 text-foreground touch-none flex items-center'
         onClick={handleClick}
         onMouseMove={handleMouseMove}
         onTouchMove={handleTouchMove}
         role={role}
         aria-checked={value}
-        variant='default'
+        variant='unstyled'
         ref={trackRef}
+        style={style}
       >
         <span className='slider-thumb -translate-x-1/2 transition-[translate,scale] group-aria-checked:translate-x-1/2' />
       </Button>

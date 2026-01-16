@@ -137,7 +137,7 @@ export function Sidebar() {
             onValueChange={handleRestitutionCoefficientChange}
           />
           <Range min={1} max={20} label='Physics steps' value={config.physicsSteps} onValueChange={handlePhysicsStepsChange} />
-          <Range min={0} max={1000} step={10} label='Min impulse' value={config.minImpulse} onValueChange={handleMinImpulseChange} />
+          <Range min={0} max={100} step={1} label='Min impulse' value={config.minImpulse} onValueChange={handleMinImpulseChange} />
 
           <hr />
 

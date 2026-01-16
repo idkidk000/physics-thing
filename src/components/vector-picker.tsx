@@ -127,7 +127,7 @@ export function VectorPicker({
       <div
         ref={containerRef}
         id={id}
-        className='size-40 border-2 border-border rounded-full relative touch-none group'
+        className='size-40 border-8 border-accent/75 rounded-full relative touch-none group shadow-md'
         onMouseMove={handleMouseMove}
         onMouseUp={sendDeferredValue}
         onTouchEnd={sendDeferredValue}
@@ -137,7 +137,7 @@ export function VectorPicker({
         // `slider` seems like the least unsuitable role but it requires aria-valuenow to be a number
         aria-valuenow={Point.inspect(value) as unknown as number}
       >
-        <div ref={dragRef} className='slider-thumb absolute -translate-3 bg-accent cursor-move'></div>
+        <div ref={dragRef} className='slider-thumb absolute -translate-[18px] cursor-move'></div>
         <svg
           width='100'
           height='100'
@@ -148,7 +148,7 @@ export function VectorPicker({
           strokeLinecap='round'
           strokeLinejoin='round'
           role='graphics-symbol'
-          className='size-full text-border'
+          className='size-full text-utility'
         >
           <circle cx='50' cy='50' r='40' />
           <circle cx='50' cy='50' r='30' />

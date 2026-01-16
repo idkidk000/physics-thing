@@ -80,7 +80,6 @@ export abstract class Entity {
   }
   set dragging(value: boolean) {
     this.#dragging = value;
-    this.#age = 0;
   }
   get dragging(): boolean {
     return this.#dragging;
@@ -163,7 +162,7 @@ export abstract class Entity {
     Entity.zero(this);
   }
   clearDebug(age: number = 5) {
-    if (this.#collisions.length) this.#collisions = this.#collisions.filter((item) => this.#age - item.at >= age);
+    if (this.#collisions.length) this.#collisions = this.#collisions.filter((item) => this.#age - item.at < age);
   }
 
   static contains(item: Entity, point: PointLike): boolean {
@@ -187,6 +186,7 @@ export abstract class Entity {
       item.#collisionTime += performance.now() - started;
       return;
     }
+    const config = item.configRef.current;
 
     const collisionVector = Vector.sub(Point.eq(collisionPoint, item.position) ? other.position : collisionPoint, item.position);
     const collisionNormal = Vector.unit(collisionVector);
@@ -195,16 +195,13 @@ export abstract class Entity {
 
     // if (normalVelocityDp > 0) return;
 
-    if (item.configRef.current.showDebug) item.#collisions.push({ at: item.#age, colllision: collisionVector });
+    if (config.showDebug) item.#collisions.push({ at: item.#age, colllision: collisionVector });
 
-    const impulse = Math.max(
-      item.configRef.current.minImpulse,
-      (-(1 + item.configRef.current.restitutionCoefficient) * collisionVelocityDp) / (1 / item.mass + 1 / other.mass)
-    );
+    const impulse = Math.max(config.minImpulse, (-(1 + config.restitutionCoefficient) * collisionVelocityDp) / (1 / item.mass + 1 / other.mass));
     const impulseVector = Vector.mult(collisionNormal, impulse);
 
-    if (!item.fixed) item.velocity.subEq(Vector.div(impulseVector, item.mass)).multEq(item.configRef.current.collideVelocityRatio);
-    if (!other.fixed) other.velocity.addEq(Vector.div(impulseVector, other.mass)).multEq(item.configRef.current.collideVelocityRatio);
+    if (!item.fixed) item.velocity.subEq(Vector.div(impulseVector, item.mass)).multEq(config.collideVelocityRatio);
+    if (!other.fixed) other.velocity.addEq(Vector.div(impulseVector, other.mass)).multEq(config.collideVelocityRatio);
 
     // actively move collliders out of static objects by 1 unit
     if (other.fixed && !item.fixed) item.position.subEq(collisionNormal);
@@ -213,7 +210,7 @@ export abstract class Entity {
     // this part is completely vibes-based
     const velocity = Vector.hypot(velocityVector);
     const perpendicularDp = Vector.dot(Vector.rotate(Vector.div(velocityVector, velocity || 1), Math.PI * 0.5), collisionNormal);
-    const rotationalImpulse = (velocity / (item.radius + other.radius)) * perpendicularDp * 0.1 * item.configRef.current.collideRotationalVelocityRatio;
+    const rotationalImpulse = (velocity / (item.radius + other.radius)) * perpendicularDp * 0.1 * config.collideRotationalVelocityRatio;
     item.rotationalVelocity -= rotationalImpulse * item.radius;
     other.rotationalVelocity += rotationalImpulse * other.radius;
 
@@ -221,6 +218,7 @@ export abstract class Entity {
   }
   static step(item: Entity, millis: number, bounds: PointLike): void {
     const config = item.configRef.current;
+
     if (!item.#dragging && !item.#fixed) {
       item.velocity.addEq(Vector.mult(config.gravity, millis * 0.0002));
       item.position.addEq(item.velocity.mult(millis));
@@ -228,33 +226,37 @@ export abstract class Entity {
     }
 
     const aabb = item.aabb;
-    let [hitX, hitY] = [true, true];
-
-    if (aabb.min.x < 0) item.position.x -= aabb.min.x;
-    else if (aabb.max.x > bounds.x) item.position.x -= aabb.max.x - bounds.x;
-    else hitX = false;
-
-    if (aabb.min.y < 0) item.position.y -= aabb.min.y;
-    else if (aabb.max.y > bounds.y) item.position.y -= aabb.max.y - bounds.y;
-    else hitY = false;
-
-    if (hitX) item.velocity.x *= -config.collideVelocityRatio;
-    if (hitY) item.velocity.y *= -config.collideVelocityRatio;
+    const hitX = aabb.min.x < 0 ? 1 : aabb.max.x > bounds.x ? 2 : 0;
+    const hitY = aabb.min.y < 0 ? 1 : aabb.max.y > bounds.y ? 2 : 0;
 
     if (hitX || hitY) {
-      for (const point of item.points) {
-        if (point.x < 0) item.rotationalVelocity -= ((point.y - item.position.y) / item.radius) * 0.1 * item.configRef.current.collideRotationalVelocityRatio;
-        else if (point.x > bounds.x)
-          item.rotationalVelocity += ((point.y - item.position.y) / item.radius) * 0.1 * item.configRef.current.collideRotationalVelocityRatio;
-        else if (point.y < 0)
-          item.rotationalVelocity += ((point.x - item.position.x) / item.radius) * 0.1 * item.configRef.current.collideRotationalVelocityRatio;
-        else if (point.y > bounds.y)
-          item.rotationalVelocity -= ((point.x - item.position.x) / item.radius) * 0.1 * item.configRef.current.collideRotationalVelocityRatio;
-      }
-    }
+      const velocity = item.velocity.hypot();
+      const velocityPerpUnit = Vector.rotate(Vector.div(item.velocity, velocity || 1), Math.PI * 0.5);
 
-    item.velocity.multEq(config.stepVelocityRatio);
-    item.rotationalVelocity *= config.rotationalVelocityRatio;
+      for (const point of item.points) {
+        if (point.x >= 0 && point.x <= bounds.x && point.y >= 0 && point.y <= bounds.y) continue;
+        const collisionVector = Vector.sub(point, item.position);
+        const collisionNormal = Vector.div(collisionVector, item.radius || 1);
+        const rotationalVelocity =
+          velocity * Vector.dot(velocityPerpUnit, collisionNormal) * config.collideRotationalVelocityRatio * config.rotationalVelocityRatio;
+        // don't let small amounts of velocity accumulate over time
+        if (Math.abs(rotationalVelocity) > Math.abs(item.rotationalVelocity)) item.rotationalVelocity += rotationalVelocity;
+        item.#collisions.push({ at: item.#age, colllision: collisionVector });
+      }
+
+      item.position.set({
+        x: item.position.x - (hitX === 1 ? aabb.min.x : hitX === 2 ? aabb.max.x - bounds.x : 0),
+        y: item.position.y - (hitY === 1 ? aabb.min.y : hitY === 2 ? aabb.max.y - bounds.y : 0),
+      });
+
+      item.velocity.multEq({
+        x: hitX ? -config.collideVelocityRatio * config.stepVelocityRatio : config.stepVelocityRatio,
+        y: hitY ? -config.collideVelocityRatio * config.stepVelocityRatio : config.stepVelocityRatio,
+      });
+    } else {
+      item.velocity.multEq(config.stepVelocityRatio);
+      item.rotationalVelocity *= config.rotationalVelocityRatio;
+    }
   }
   static drawDebug(item: Entity, context: CanvasRenderingContext2D): void {
     context.strokeStyle = '#0f0';

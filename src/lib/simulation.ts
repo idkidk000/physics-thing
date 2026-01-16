@@ -174,9 +174,9 @@ export class Simulation {
     if (!this.#canvasRef.current) throw new Error('canvasRef is null');
     const rect = this.#canvasRef.current.getBoundingClientRect();
     const bounds = Point.round({ x: rect.width, y: rect.height });
-
     const position = Point.round({ x: rect.left, y: rect.top });
     const canvasMouse = Point.sub(this.#mouseRef.current, position);
+    const config = this.#configRef.current;
 
     if (this.#mouseRef.current.event === MouseStateEvent.End) {
       if (this.#activeEntity) {
@@ -200,8 +200,8 @@ export class Simulation {
       const { x, y } = this.#activeEntity.position;
       this.#activeEntity.position.set(canvasMouse);
       const velocity = this.#activeEntity.position.sub({ x, y }).divEq(elapsedMillis);
-      this.#activeEntity.velocity.addEq(velocity.multEq(this.#configRef.current.dragVelocity));
-    } else if (this.#configRef.current.clickSpawn && this.#mouseRef.current.buttons) {
+      this.#activeEntity.velocity.addEq(velocity.multEq(config.dragVelocity));
+    } else if (config.clickSpawn && this.#mouseRef.current.buttons) {
       this.addEntity(canvasMouse);
     }
 
@@ -209,7 +209,7 @@ export class Simulation {
       const rect = this.#canvasRef.current.getBoundingClientRect();
       const canvasArea = rect.width * rect.height;
       let entityArea = 0;
-      for (let i = 0; i < this.#configRef.current.initialEntities; ++i) {
+      for (let i = 0; i < config.initialEntities; ++i) {
         const entity = this.addEntity({
           x: bounds.x * Math.random(),
           y: bounds.y * Math.random(),
@@ -219,16 +219,14 @@ export class Simulation {
       }
     }
 
-    if (this.#configRef.current.showDebug) for (const entity of this.#entities) entity.clearDebug();
+    this.#light.rotateEq(config.lightMotion * elapsedMillis * 0.0001);
 
-    this.#light.rotateEq(this.#configRef.current.lightMotion * elapsedMillis * 0.0001);
-
-    const physicsMillis = elapsedMillis / this.#configRef.current.physicsSteps;
+    const physicsMillis = elapsedMillis / config.physicsSteps;
     let entityStepTime = 0;
     let entityCollideTime = 0;
     let collisions = 0;
     let aabbTests = 0;
-    for (let step = 0; step < this.#configRef.current.physicsSteps; ++step) {
+    for (let step = 0; step < config.physicsSteps; ++step) {
       const sorted = this.#entities.toSorted((a, b) => a.aabb.min.x - b.aabb.min.x);
       const entityStepStarted = performance.now();
       for (const entity of sorted) entity.step(physicsMillis, bounds);
@@ -256,10 +254,11 @@ export class Simulation {
     this.#aabbTests.push(aabbTests);
 
     for (const [i, item] of this.#entities.entries()) {
-      if (!item.dragging) ++item.age;
-      if (!(item.dragging || this.#configRef.current.maxAge === 0) && item.age >= this.#configRef.current.maxAge) --item.opacity;
+      ++item.age;
+      if (!(item.dragging || config.maxAge === 0) && item.age >= config.maxAge) --item.opacity;
       else if (item.opacity < 100) ++item.opacity;
       if (item.opacity === 0) this.#deleteIxs.add(i);
+      if (config.showDebug) item.clearDebug();
     }
 
     if (this.#deleteIxs.size) {

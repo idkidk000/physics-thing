@@ -94,38 +94,14 @@ export function useEvent() {
   return context;
 }
 
-function EventButton({
-  id,
-  keyName: key,
-  label,
-  className,
-  clickClass = 'bg-button-active',
-  clickMillis = 200,
-  accent,
-}: Event & { className?: string; clickClass?: string; clickMillis?: number }) {
+function EventButton({ id, keyName: key, label, className, accent }: Event & { className?: string; clickClass?: string; clickMillis?: number }) {
   const { eventRef } = useEvent();
-  const ref = useRef<HTMLButtonElement>(null);
-  const timeoutRef = useRef<number>(null);
 
   const handleClick = useCallback(() => eventRef.current.emit(id as EventId), [id]);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    // biome-ignore format: no
-    eventRef.current.subscribe(id as EventId, () => {
-      ref.current?.classList.toggle(clickClass, true);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => {
-        ref.current?.classList.toggle(clickClass, false);
-        timeoutRef.current = null;
-      }, clickMillis);
-    }, controller.signal);
-    return () => controller.abort();
-  }, [id, clickClass, clickMillis]);
-
   return (
-    <Button type='button' className={className} key={id} onClick={handleClick} ref={ref} variant={accent ? 'accent' : undefined}>
-      <kbd>{key}</kbd>
+    <Button type='button' className={className} key={id} onClick={handleClick} variant={accent ? 'accent' : undefined}>
+      <kbd className='-mx-[3px]'>{key}</kbd>
       <span>{label}</span>
     </Button>
   );

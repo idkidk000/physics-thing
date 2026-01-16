@@ -2,6 +2,7 @@ import { type ChangeEvent, type CSSProperties, type MouseEvent, type TouchEvent,
 import { Button } from '@/components/button';
 import * as Utils from '@/lib/utils';
 
+// TODO: scale thumb on control hover. adding `group` to the input has no effect. seems to be a limitation of the ::-moz-range-thumb and ::-webkit-slider-thumb pseudo elements. probably needs a custom control
 /** for picking a single value from a range */
 export function Range({
   min,
@@ -27,7 +28,8 @@ export function Range({
 
   // biome-ignore format: no
   const style = useMemo(() => ({
-    '--percent-to': `${(100 * (value - min)) / (max - min)}%`,
+    // there's some jank because the slider-track background needs to use the border box, but the slider uses the content box
+    '--percent-to': `${((96 * (value - min)) / (max - min))+2}%`,
   }), [min, max, value]) as CSSProperties;
 
   return (

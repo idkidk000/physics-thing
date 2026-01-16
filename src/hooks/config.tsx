@@ -13,6 +13,7 @@ import {
 } from 'react';
 import { useEvent } from '@/hooks/event';
 import type { VectorLike } from '@/lib/2d/core';
+import * as Utils from '@/lib/utils';
 
 export enum ShadingType {
   Flat,
@@ -70,14 +71,16 @@ export const defaultConfig: Config = {
   colourScheme: ColourSchemeType.Dark,
   dragVelocity: 0.25,
   drawBlur: false,
-  entityType: EntityType.Circle | EntityType.Square | EntityType.Heart | EntityType.Star,
+  entityType: Utils.enumEntries(EntityType)
+    .map(([, type]) => type)
+    .reduce((acc, item) => acc | item, 0),
   gravity: { x: 0, y: 0 },
-  hueCenter: 215,
+  hueCenter: 245,
   hueRange: 75,
   initialEntities: 60,
   lightMotion: 10,
   maxAge: 0,
-  minImpulse: 10,
+  minImpulse: 5,
   paused: false,
   physicsSteps: 5,
   radiusMax: 70,
@@ -108,6 +111,7 @@ function writeLocalStorage(config: Config): void {
   document.body.classList.toggle('dark', config.colourScheme === ColourSchemeType.Dark);
   document.body.classList.toggle('light', config.colourScheme === ColourSchemeType.Light);
   document.documentElement.style.setProperty('--hue-center', `${config.hueCenter}`);
+  document.documentElement.style.setProperty('--hue-range', `${config.hueRange}`);
 }
 
 export function ConfigProvider({ children }: { children: ReactNode }) {

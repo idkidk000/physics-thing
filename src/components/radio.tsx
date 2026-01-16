@@ -152,7 +152,7 @@ export function RadioSlider({
         <Button
           type='button'
           role='radio'
-          className='slider-thumb absolute -translate-1/2 top-1/2 pointer-events-none transition-[left]'
+          className='slider-thumb absolute -translate-1/2 top-1/2 pointer-events-none transition-[left,scale]'
           variant='unstyled'
           style={buttonStyle}
         />
