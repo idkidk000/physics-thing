@@ -1,4 +1,4 @@
-import { type CSSProperties, type MouseEvent, type TouchEvent, useCallback, useEffect, useId, useMemo, useRef } from 'react';
+import { type CSSProperties, type KeyboardEvent, type MouseEvent, type TouchEvent, useCallback, useEffect, useId, useMemo, useRef } from 'react';
 import { Point, type PointLike, Vector, type VectorLike } from '@/lib/2d/core';
 
 export function VectorPicker({
@@ -37,8 +37,8 @@ export function VectorPicker({
     dragRef.current.style.left = `${position.x}px`;
     dragRef.current.style.top = `${position.y}px`;
     spanVecRef.current.innerText = `{ x: ${vec.x.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}, y: ${vec.y.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })} }`;
-    const hypot = Vector.hypot(vec)
-    spanDegRef.current.innerText = `${hypot===0 ? 0 : Math.round(Vector.toDegrees(vec))}°, strength: ${hypot.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+    const hypot = Vector.hypot(vec);
+    spanDegRef.current.innerText = `${hypot === 0 ? 0 : Math.round(Vector.toDegrees(vec))}°, strength: ${hypot.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
   }, [range, digits]);
 
   useEffect(() => {
@@ -64,13 +64,16 @@ export function VectorPicker({
       const { beta, gamma } = event;
       if (beta === null || gamma === null) return;
       if (deviceOffsetRef.current === null) {
-        deviceOffsetRef.current = Vector.sub({ x: gamma, y: beta }, Vector.mult(deferredValueRef.current, 90 / range));
+        // this feels like the correct approach but sensors are noisy. just zero everything instead
+        // deviceOffsetRef.current = Vector.sub({ x: gamma, y: beta }, Vector.mult(deferredValueRef.current, 90 / range));
+        deviceOffsetRef.current = { x: gamma, y: beta };
+        deferredValueRef.current = { x: 0, y: 0 };
         return;
       }
       const raw = Vector.sub({ x: gamma, y: beta }, deviceOffsetRef.current);
       const hypot = Vector.hypot(raw);
       const scaled = Vector.roundTo(Vector.mult(Vector.div(raw, Math.max(deviceXyClamp, hypot)), range), digits);
-      const min = (10 ** -digits)*5
+      const min = 10 ** -digits * 5;
       if (Math.abs(scaled.x) <= min) scaled.x = 0;
       if (Math.abs(scaled.y) <= min) scaled.y = 0;
       deferredValueRef.current = scaled;
@@ -93,12 +96,12 @@ export function VectorPicker({
     if (hypot2 > radius2) return;
     const relative = Point.sub(position, center);
     const value = Point.roundTo(Point.mult(Point.div(relative, radius), range), digits);
-    const min=(10**-digits)*5
-    if (Math.abs(value.x)<=min) value.x=0;
-    if (Math.abs(value.y)<=min) value.y=0;
+    const min = 10 ** -digits * 5;
+    if (Math.abs(value.x) <= min) value.x = 0;
+    if (Math.abs(value.y) <= min) value.y = 0;
     deferredValueRef.current = value;
     timeoutRef.current ??= setTimeout(sendDeferredValue, updateMillis);
-    deviceOffsetRef.current=null
+    deviceOffsetRef.current = null;
     updateControl(value);
   }, [range, sendDeferredValue, updateControl, updateMillis, digits]);
 
@@ -111,6 +114,26 @@ export function VectorPicker({
   const handleTouchMove = useCallback((event: TouchEvent<HTMLDivElement>) => updateDeferredValue(event.touches[0]), [updateDeferredValue]);
 
   const handleMouseClick = useCallback((event: MouseEvent<HTMLDivElement>) => updateDeferredValue(event), [updateDeferredValue]);
+
+  // biome-ignore format: no
+  const handleKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    if (!(event.key.startsWith('Arrow') || event.key === '0')) return;
+    event.stopPropagation();
+    event.preventDefault();
+    const step = 10 ** -digits;
+    const value =
+      event.key === '0'
+        ? { x: 0, y: 0 }
+        : Vector.add(deferredValueRef.current, {
+            x: event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0,
+            y: event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0,
+          });
+    const hypot = Vector.hypot(value);
+    const mapped = hypot > range ? Vector.div(value, hypot / range) : value;
+    if (Vector.eq(mapped, deferredValueRef.current)) return;
+    deferredValueRef.current = mapped;
+    sendDeferredValue();
+  }, [sendDeferredValue, range, digits]);
 
   // biome-ignore format: no
   const colStyle: CSSProperties = useMemo(() => ({
@@ -127,7 +150,7 @@ export function VectorPicker({
       <div
         ref={containerRef}
         id={id}
-        className='size-40 border-8 border-accent/75 rounded-full relative touch-none group shadow-md'
+        className='size-40 border-2 border-accent/35 rounded-full relative touch-none group shadow-md shrink-0'
         onMouseMove={handleMouseMove}
         onMouseUp={sendDeferredValue}
         onTouchEnd={sendDeferredValue}
@@ -136,8 +159,10 @@ export function VectorPicker({
         role='slider'
         // `slider` seems like the least unsuitable role but it requires aria-valuenow to be a number
         aria-valuenow={Point.inspect(value) as unknown as number}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
       >
-        <div ref={dragRef} className='slider-thumb absolute -translate-[18px] cursor-move'></div>
+        <div ref={dragRef} className='slider-thumb absolute -translate-[16px] cursor-move'></div>
         <svg
           width='100'
           height='100'
@@ -150,10 +175,10 @@ export function VectorPicker({
           role='graphics-symbol'
           className='size-full text-utility'
         >
-          <circle cx='50' cy='50' r='40' />
-          <circle cx='50' cy='50' r='30' />
-          <circle cx='50' cy='50' r='20' />
-          <circle cx='50' cy='50' r='10' />
+          <circle cx='50' cy='50' r='49' className='text-accent' strokeWidth={2} />
+          <circle cx='50' cy='50' r='37' />
+          <circle cx='50' cy='50' r='23' />
+          <circle cx='50' cy='50' r='9' />
           <line x1='0' x2='100' y1='50' y2='50' />
           <line x1='50' x2='50' y1='0' y2='100' />
         </svg>

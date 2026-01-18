@@ -14,6 +14,8 @@ import { MovingAverage } from '@/lib/moving-average';
 import * as Utils from '@/lib/utils';
 
 const MAX_ENTITIES = 100;
+/** stop adding entities at sim start when this area of the canvas is full */
+const MAX_INITIAL_FILL = 0.2;
 
 const entityClasses: Record<EntityType, new (...params: ConstructorParameters<typeof Entity>) => Entity> = {
   [EntityType.Circle]: Circle,
@@ -34,8 +36,8 @@ const sortTypes = Utils.enumEntries(SortType).map(([, value]) => value);
 
 const sortFunctions: Record<SortType, (a: Entity, b: Entity) => number> = {
   [SortType.Fit]: (a, b) => a.radius - b.radius,
-  [SortType.NameThenHue]: (a, b) => a.constructor.name.localeCompare(b.constructor.name) || a.hue - b.hue,
-  [SortType.NameThenRadius]: (a, b) => a.constructor.name.localeCompare(b.constructor.name) || a.radius - b.radius,
+  [SortType.NameThenHue]: (a, b) => a.displayName.localeCompare(b.displayName) || a.hue - b.hue,
+  [SortType.NameThenRadius]: (a, b) => a.displayName.localeCompare(b.displayName) || a.radius - b.radius,
 };
 
 export class Simulation {
@@ -149,7 +151,7 @@ export class Simulation {
             y: Math.random() - 0.5,
           })
           .unitEq()
-          .mult(Math.random() * 10);
+          .multEq(Math.random() * 10);
           entity.rotationalVelocity = Math.random() * 20 - 10;
         }
       }, this.#controller.signal);
@@ -215,7 +217,7 @@ export class Simulation {
           y: bounds.y * Math.random(),
         });
         entityArea += entity.mass;
-        if (entityArea > canvasArea * 0.5) return;
+        if (entityArea > canvasArea * MAX_INITIAL_FILL) return;
       }
     }
 

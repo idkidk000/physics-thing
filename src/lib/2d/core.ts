@@ -20,7 +20,7 @@ export interface AABBLike {
 }
 
 export interface CircleLike {
-  position: Point;
+  position: PointLike;
   radius: number;
   radius2: number;
 }
@@ -57,8 +57,8 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
   sub(other: Interface): this {
     return new this.#typedConstructor(PointOrVector.sub(this, other));
   }
-  mult(...[param]: [value: number] | [other: Interface]): this {
-    return new this.#typedConstructor(PointOrVector.mult(...([this, param] as [PointOrVectorLike, PointOrVectorLike] | [PointOrVectorLike, number])));
+  mult(...params: [value: number] | [other: Interface]): this {
+    return new this.#typedConstructor(PointOrVector.mult(this, ...params));
   }
   div(value: number): this {
     return new this.#typedConstructor(PointOrVector.div(this, value));
@@ -104,8 +104,8 @@ abstract class PointOrVector<Interface extends PointOrVectorLike> {
     this.#callback?.();
     return this;
   }
-  multEq(...[param]: [value: number] | [other: Interface]): this {
-    const { x, y } = PointOrVector.mult(...([this, param] as [PointOrVectorLike, PointOrVectorLike] | [PointOrVectorLike, number]));
+  multEq(...params: [value: number] | [other: Interface]): this {
+    const { x, y } = PointOrVector.mult(this, ...params);
     [this.x, this.y] = [x, y];
     this.#callback?.();
     return this;

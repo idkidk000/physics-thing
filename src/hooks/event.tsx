@@ -33,6 +33,10 @@ const eventGroups = [
     { id: 'reset', keyName: 'r', label: 'Reset simulation', accent: true },
   ],
   [
+    { id: 'tile', keyName: 't', label: 'Tile' },
+    { id: 'jumble', keyName: 'j', label: 'Jumble' },
+  ],
+  [
     { id: 'fixed', keyName: 'i', label: 'Toggle fixed' },
     { id: 'grow', keyName: 'g', label: 'Grow' },
     { id: 'rotate', keyName: 'o', label: 'Rotate' },
@@ -43,8 +47,6 @@ const eventGroups = [
     { id: 'dump', keyName: 'd', label: 'Dump to console' },
     { id: 'reload', keyName: 'l', label: 'Reload renderer' },
     { id: 'showDebug', keyName: 'e', label: 'Toggle debug' },
-    { id: 'tile', keyName: 't', label: 'Tile' },
-    { id: 'jumble', keyName: 'j', label: 'Jumble' },
   ],
   [
     { id: 'defaults', keyName: 'c', label: 'Reset config', accent: true },
@@ -94,20 +96,20 @@ export function useEvent() {
   return context;
 }
 
-function EventButton({ id, keyName: key, label, className, accent }: Event & { className?: string; clickClass?: string; clickMillis?: number }) {
+function EventButton({ id, keyName: key, label, accent }: Event) {
   const { eventRef } = useEvent();
 
   const handleClick = useCallback(() => eventRef.current.emit(id as EventId), [id]);
 
   return (
-    <Button type='button' className={className} key={id} onClick={handleClick} variant={accent ? 'accent' : undefined}>
-      <kbd className='-mx-[3px]'>{key}</kbd>
+    <Button type='button' key={id} onClick={handleClick} variant={accent ? 'accent' : undefined}>
+      <kbd className='-mx-px'>{key}</kbd>
       <span>{label}</span>
     </Button>
   );
 }
 
-export function EventButtons({ className }: { className?: string }) {
+export function EventButtons() {
   return (
     <div className='flex flex-col gap-4'>
       {eventGroups
@@ -118,7 +120,7 @@ export function EventButtons({ className }: { className?: string }) {
             {group
               .filter((event) => !('hidden' in event))
               .map((event) => (
-                <EventButton key={event.id} {...event} className={className} />
+                <EventButton key={event.id} {...event} />
               ))}
           </div>
         ))}

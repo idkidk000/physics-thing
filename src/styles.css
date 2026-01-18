@@ -36,18 +36,7 @@
   initial-value: transparent;
 }
 
-@property --angle {
-  syntax: "<angle>";
-  inherits: false;
-  initial-value: 0turn;
-}
-
-@keyframes rotate {
-  100% {
-    --angle: 1turn;
-  }
-}
-
+/* used by `a` elem and `anchor-gradient-centers` animation */
 @property --x0 {
   syntax: "<percentage>";
   inherits: false;
@@ -63,7 +52,6 @@
   inherits: false;
   initial-value: 0%;
 }
-
 @property --y0 {
   syntax: "<percentage>";
   inherits: false;
@@ -80,42 +68,47 @@
   initial-value: 0%;
 }
 
+/* this could be done properly with three animations, delayed by duration/3, with sine easing and keyframes for their x and ys only when they're at the end of travel. but that would be even more verbose */
 @keyframes anchor-gradient-centers {
   0% {
     --x0: 0%;
-    --x1: 50%;
-    --x2: 100%;
-
-    --y0: 0%;
-    --y1: 100%;
-    --y2: 0%;
+    --y0: 50%;
+    --x1: 75%;
+    --y1: 6.5%;
+    --x2: 75%;
+    --y2: 93.5%;
   }
-  33% {
-    --x0: 100%;
-    --x1: 0%;
-    --x2: 50%;
-
-    --y0: 0%;
-    --y1: 0%;
-    --y2: 100%;
-  }
-  67% {
+  25% {
     --x0: 50%;
-    --x1: 100%;
-    --x2: 0%;
-
+    --y0: 0%;
+    --x1: 93.5%;
+    --y1: 75%;
+    --x2: 6.5%;
+    --y2: 75%;
+  }
+  50% {
+    --x0: 100%;
+    --y0: 50%;
+    --x1: 25%;
+    --y1: 93.5%;
+    --x2: 25%;
+    --y2: 6.5%;
+  }
+  75% {
+    --x0: 50%;
     --y0: 100%;
-    --y1: 0%;
-    --y2: 0%;
+    --x1: 6.5%;
+    --y1: 25%;
+    --x2: 93.5%;
+    --y2: 25%;
   }
   100% {
     --x0: 0%;
-    --x1: 50%;
-    --x2: 100%;
-
-    --y0: 0%;
-    --y1: 100%;
-    --y2: 0%;
+    --y0: 50%;
+    --x1: 75%;
+    --y1: 6.5%;
+    --x2: 75%;
+    --y2: 93.5%;
   }
 }
 
@@ -124,79 +117,31 @@
   --color-background: light-dark(var(--color-gray-50), var(--color-gray-950));
   /* --hue-center is set by hooks/config on config change. lch gives more consistent perceived brightness but it changes the hue significantly */
   /* --color-accent: light-dark(hsl(var(--hue-center) 100 35), hsl(var(--hue-center) 100 45)); */
-  --color-accent: light-dark(lch(45% 100% var(--hue-center)), lch(35% 100% var(--hue-center)));
+  --color-accent: light-dark(lch(50% 100% var(--hue-center)), lch(70% 100% var(--hue-center)));
   --color-utility: light-dark(var(--color-gray-300), var(--color-gray-700));
   --color-utility-rev: light-dark(var(--color-gray-700), var(--color-gray-300));
-
   --color-border: hsl(from var(--color-utility) h s l / 50%);
-  --color-button: hsl(from var(--color-utility) h s l / 25%);
-  --color-button-hover: hsl(from var(--color-utility) h s l / 50%);
-  --color-button-active: hsl(from var(--color-utility) h s l / 75%);
-
-  --color-danger: light-dark(var(--color-rose-400), var(--color-rose-600));
-}
-
-@utility pixel {
-  image-rendering: pixelated;
 }
 
 @utility slider-thumb {
-  @apply appearance-none box-border size-5 rounded-full border-2 border-utility group-hover:scale-110 transition-[scale] cursor-pointer;
+  @apply appearance-none box-content size-[1lh] rounded-full border-2 border-utility group-hover:scale-110 transition-[scale] cursor-pointer;
   background:
-    linear-gradient(to bottom, light-dark(#fffa, #fff3), transparent 50%, light-dark(#0002, #0007)) border-box,
+    linear-gradient(to bottom, light-dark(#fffa, #fff3), transparent 15%, transparent 85%, light-dark(#0002, #0007)) border-box,
     linear-gradient(var(--color-utility-rev));
 }
 
 @utility slider-track {
-  @apply appearance-none box-border h-4 rounded-full border-2 border-border cursor-pointer m-0 shadow-sm;
+  @apply appearance-none box-border h-lh rounded-full border-2 border-border cursor-pointer m-0 shadow-sm;
   background:
-    linear-gradient(to bottom, light-dark(#fffa, #fff3), transparent 50%, light-dark(#0002, #0007)) border-box,
+    linear-gradient(to bottom, light-dark(#fffa, #fff3), transparent 20%, transparent 80%, light-dark(#0002, #0007)) border-box,
     linear-gradient(
       in lch increasing hue to right,
       transparent var(--percent-from),
       var(--color-accent) var(--percent-from),
-      var(--color-accent),
       var(--color-accent) var(--percent-to),
-      /* lch(from var(--color-accent) l c calc(h - var(--hue-range))) var(--percent-from),
-      var(--color-accent),
-      lch(from var(--color-accent) l c calc(h + var(--hue-range))) var(--percent-to), */
       transparent var(--percent-to)
     )
     border-box no-repeat;
-}
-
-@utility dark {
-  color-scheme: dark;
-}
-
-@utility light {
-  color-scheme: light;
-}
-
-@utility button-bg {
-  --bg: var(--color-button);
-  background:
-    linear-gradient(to bottom, light-dark(#fffa, #fff3), transparent 50%, light-dark(#0002, #0007)) border-box,
-    linear-gradient(var(--bg)) border-box;
-  &:hover {
-    --bg: var(--color-button-hover);
-  }
-  &:active {
-    --bg: var(--color-button-active);
-  }
-}
-
-@utility button-bg-accent {
-  --bg: lch(from var(--color-accent) l c h / 75%);
-  background:
-    linear-gradient(to bottom, light-dark(#fffa, #fff3), transparent 50%, light-dark(#0002, #0007)) border-box,
-    linear-gradient(var(--bg)) border-box;
-  &:hover {
-    --bg: lch(from var(--color-accent) l c h / 85%);
-  }
-  &:active {
-    --bg: var(--color-accent);
-  }
 }
 
 @layer base {
@@ -209,32 +154,24 @@
   }
 
   kbd {
-    @apply font-mono bg-button px-2 rounded-full border border-border;
+    @apply font-mono bg-utility/25 px-2 rounded-full border border-border;
   }
 
   a {
-    @apply border-4 px-[2ch] py-[0.25lh] rounded-full border-transparent hover:scale-110;
+    @apply border-4 px-[2ch] py-[0.25lh] rounded-full border-transparent hover:scale-110 text-foreground bg-background;
     background:
-      linear-gradient(to bottom, light-dark(#fffa, #fff3), transparent 50%, light-dark(#0002, #0007)) border-box,
+      linear-gradient(to bottom, light-dark(#fffa, #fff3), transparent, light-dark(#0002, #0007)) border-box,
       radial-gradient(var(--color-background) var(--percent-from), transparent var(--percent-to)) padding-box,
-      radial-gradient(circle at var(--x0) var(--y0), lch(from var(--color-accent) l c calc(h + var(--hue-range))), transparent) border-box,
-      radial-gradient(circle at var(--x1) var(--y1), lch(from var(--color-accent) l c calc(h - var(--hue-range))), transparent) border-box,
-      radial-gradient(circle at var(--x2) var(--y2), lch(from var(--color-accent) l c h), transparent) border-box;
-    /* conic-gradient(
-        in oklch from var(--angle),
-        lch(from var(--color-accent) l c calc(h - 60)),
-        lch(from var(--color-accent) l c calc(h + 60)),
-        lch(from var(--color-accent) l c calc(h - 60))
-      )
-      border-box; */
+      radial-gradient(circle farthest-corner at var(--x0) var(--y0), lch(70% 100% calc(var(--hue-center) + var(--hue-range))), transparent 67%) border-box,
+      radial-gradient(circle farthest-corner at var(--x1) var(--y1), lch(70% 100% calc(var(--hue-center) - var(--hue-range))), transparent 67%) border-box,
+      radial-gradient(circle farthest-corner at var(--x2) var(--y2), lch(70% 100% var(--hue-center)), transparent 67%) border-box;
     transition:
       --percent-from 1s,
       --percent-to 1s,
       scale 300ms;
     --percent-from: 50%;
     --percent-to: 150%;
-    /* animation: rotate 7s linear infinite; */
-    animation: anchor-gradient-centers 4s linear infinite;
+    animation: anchor-gradient-centers 7s linear infinite;
     &:hover {
       --percent-from: -50%;
       --percent-to: 50%;
@@ -250,7 +187,6 @@
     appearance: unset;
     -moz-appearance: none;
     -webkit-appearance: none;
-    @apply w-45;
     &::-moz-range-thumb {
       @apply slider-thumb;
     }
@@ -265,12 +201,23 @@
     }
   }
 
-  .range {
-    & > label {
-      @apply w-36;
-    }
-    & > span {
-      @apply w-12;
-    }
+  .pixel {
+    image-rendering: pixelated;
+  }
+
+  .dark {
+    color-scheme: dark;
+  }
+
+  .light {
+    color-scheme: light;
+  }
+
+  /* requires --bg property. set it via tailwind with hover:[--bg:var(--color-red-500)] etc and add [--bg] to your transitioned properties
+   */
+  .button-bg {
+    background:
+      linear-gradient(to bottom, light-dark(#fffa, #fff3), transparent 12%, transparent 88%, light-dark(#0002, #0007)) border-box,
+      linear-gradient(var(--bg)) border-box;
   }
 }

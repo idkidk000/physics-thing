@@ -140,6 +140,8 @@ export abstract class Entity {
   abstract get mass(): number;
   abstract get aabb(): AABBLike;
   abstract get points(): PointLike[];
+  /** constructor.name is arbitary after minification. this allows sorting to work in the expected way */
+  abstract get displayName(): string;
   /** `static abstract` isn't valid syntax, but implement a static `draw` method and call it from an instanced method of the same name */
   abstract draw(context: CanvasRenderingContext2D, light: PointLike, maxLightDistance: number): void;
 

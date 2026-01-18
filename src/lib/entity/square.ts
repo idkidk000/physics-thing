@@ -11,4 +11,7 @@ export class Square extends PolyEntity {
   get shape(): VectorLikeWithRadius[] {
     return shape;
   }
+  get displayName() {
+    return 'Square';
+  }
 }

@@ -59,7 +59,7 @@ export function Switch({
       <Button
         id={id}
         type='button'
-        className='h-4 w-10 rounded-full m-0 p-0 justify-center transition-[--percent-to] slider-track group border-2 text-foreground touch-none flex items-center'
+        className='w-10 rounded-full m-0 p-0 justify-center transition-[--percent-to] slider-track group border-2 text-foreground touch-none flex items-center'
         onClick={handleClick}
         onMouseMove={handleMouseMove}
         onTouchMove={handleTouchMove}

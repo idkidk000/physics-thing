@@ -74,7 +74,7 @@ export const defaultConfig: Config = {
   entityType: Utils.enumEntries(EntityType)
     .map(([, type]) => type)
     .reduce((acc, item) => acc | item, 0),
-  gravity: { x: 0, y: 0 },
+  gravity: { x: 0, y: 0.33 },
   hueCenter: 245,
   hueRange: 75,
   initialEntities: 60,

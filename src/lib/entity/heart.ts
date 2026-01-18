@@ -19,4 +19,7 @@ export class Heart extends PolyEntity {
   get shape(): VectorLikeWithRadius[] {
     return shape;
   }
+  get displayName() {
+    return 'Heart';
+  }
 }

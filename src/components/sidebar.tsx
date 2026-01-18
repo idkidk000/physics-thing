@@ -61,7 +61,7 @@ export function Sidebar() {
       <Button
         type='button'
         onClick={toggleOpen}
-        className='fixed top-0 left-0 px-4 py-2 m-2 rounded bg-background border-2 border-border z-20 group'
+        className='fixed top-0 left-0 px-4 py-2 m-2 rounded-full bg-background border-2 border-border z-20 group shadow'
         aria-expanded={open}
         variant='unstyled'
       >
@@ -102,55 +102,57 @@ export function Sidebar() {
 
           <hr />
 
-          <Range min={0.1} max={0.5} step={0.01} label='Drag velocity' value={config.dragVelocity} onValueChange={handleDragVelocityChange} />
-          <Range
-            min={0.95}
-            max={1.05}
-            step={0.001}
-            label='Collide velocity'
-            value={config.collideVelocityRatio}
-            onValueChange={handleCollideVelocityRatioChange}
-          />
-          <Range min={0.95} max={1.05} step={0.001} label='Step velocity' value={config.stepVelocityRatio} onValueChange={handleStepVelocityRatioChange} />
-          <Range
-            min={0.95}
-            max={1.05}
-            step={0.001}
-            label='Rotational velocity'
-            value={config.rotationalVelocityRatio}
-            onValueChange={handleRotationalVelocityRatioChange}
-          />
-          <Range
-            min={0.95}
-            max={1.05}
-            step={0.001}
-            label='Collide rotational velocity'
-            value={config.collideRotationalVelocityRatio}
-            onValueChange={handleCollideRotationalVelocityRatioChange}
-          />
-          <Range
-            min={0.95}
-            max={1.05}
-            step={0.001}
-            label='Restitution'
-            value={config.restitutionCoefficient}
-            onValueChange={handleRestitutionCoefficientChange}
-          />
-          <Range min={1} max={20} label='Physics steps' value={config.physicsSteps} onValueChange={handlePhysicsStepsChange} />
-          <Range min={0} max={100} step={1} label='Min impulse' value={config.minImpulse} onValueChange={handleMinImpulseChange} />
+          <div className='grid grid-cols-[1fr_11em_6ch] gap-2'>
+            <Range min={0.1} max={0.5} step={0.01} label='Drag velocity' value={config.dragVelocity} onValueChange={handleDragVelocityChange} />
+            <Range
+              min={0.95}
+              max={1.05}
+              step={0.001}
+              label='Collide velocity'
+              value={config.collideVelocityRatio}
+              onValueChange={handleCollideVelocityRatioChange}
+            />
+            <Range min={0.95} max={1.05} step={0.001} label='Step velocity' value={config.stepVelocityRatio} onValueChange={handleStepVelocityRatioChange} />
+            <Range
+              min={0.95}
+              max={1.05}
+              step={0.001}
+              label='Rotational velocity'
+              value={config.rotationalVelocityRatio}
+              onValueChange={handleRotationalVelocityRatioChange}
+            />
+            <Range
+              min={0.95}
+              max={1.05}
+              step={0.001}
+              label='Collide rotational velocity'
+              value={config.collideRotationalVelocityRatio}
+              onValueChange={handleCollideRotationalVelocityRatioChange}
+            />
+            <Range
+              min={0.95}
+              max={1.05}
+              step={0.001}
+              label='Restitution'
+              value={config.restitutionCoefficient}
+              onValueChange={handleRestitutionCoefficientChange}
+            />
+            <Range min={1} max={20} label='Physics steps' value={config.physicsSteps} onValueChange={handlePhysicsStepsChange} />
+            <Range min={0} max={100} step={1} label='Min impulse' value={config.minImpulse} onValueChange={handleMinImpulseChange} />
 
-          <hr />
+            <hr className='col-span-3' />
 
-          <Range min={0} max={10000} step={100} label='Max age' value={config.maxAge} onValueChange={handleMaxAgeChange} />
-          <Range min={0} max={100} step={1} label='Initial entities' value={config.initialEntities} onValueChange={handleInitialEntitiesChange} />
+            <Range min={0} max={10000} step={100} label='Max age' value={config.maxAge} onValueChange={handleMaxAgeChange} />
+            <Range min={0} max={100} step={1} label='Initial entities' value={config.initialEntities} onValueChange={handleInitialEntitiesChange} />
 
-          <hr />
+            <hr className='col-span-3' />
 
-          <Range min={0} max={359} label='Hue center' value={config.hueCenter} onValueChange={handleHueCenterChange} />
-          <Range min={0} max={180} label='Hue range' value={config.hueRange} onValueChange={handleHueRangeChange} />
-          <Range min={0} max={100} label='Light motion' value={config.lightMotion} onValueChange={handleLightMotionChange} />
+            <Range min={0} max={359} label='Hue center' value={config.hueCenter} onValueChange={handleHueCenterChange} />
+            <Range min={0} max={180} label='Hue range' value={config.hueRange} onValueChange={handleHueRangeChange} />
+            <Range min={0} max={100} label='Light motion' value={config.lightMotion} onValueChange={handleLightMotionChange} />
 
-          <RangeTwo min={1} max={200} label='Radius' valueMin={config.radiusMin} valueMax={config.radiusMax} onValueChange={handleRadiusChange} />
+            <RangeTwo min={1} max={200} label='Radius' valueMin={config.radiusMin} valueMax={config.radiusMax} onValueChange={handleRadiusChange} />
+          </div>
 
           <hr />
 

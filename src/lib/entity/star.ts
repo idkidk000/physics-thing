@@ -1,18 +1,5 @@
 import { PolyEntity, type VectorLikeWithRadius } from '@/lib/entity/base/poly-entity';
 
-// const shape: VectorLikeWithRadius[] = [
-//   { x: 0.22, y: -0.31, r: 0.03 },
-//   { x: 0.95, y: -0.31, r: 0.1 },
-//   { x: 0.36, y: 0.12, r: 0.03 },
-//   { x: 0.59, y: 0.81, r: 0.1 },
-//   { x: 0, y: 0.38, r: 0.03 },
-//   { x: -0.59, y: 0.81, r: 0.1 },
-//   { x: -0.36, y: 0.12, r: 0.03 },
-//   { x: -0.95, y: -0.31, r: 0.1 },
-//   { x: -0.22, y: -0.31, r: 0.03 },
-//   { x: 0, y: -1, r: 0.1 },
-// ];
-
 const shape: VectorLikeWithRadius[] = [
   { x: 0.24200000000000002, y: -0.341, r: 0.1 },
   { x: 1.045, y: -0.341, r: 0.03 },
@@ -29,5 +16,8 @@ const shape: VectorLikeWithRadius[] = [
 export class Star extends PolyEntity {
   get shape(): VectorLikeWithRadius[] {
     return shape;
+  }
+  get displayName() {
+    return 'Star';
   }
 }
