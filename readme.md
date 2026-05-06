@@ -6,7 +6,7 @@ Written in TypeScript, React, Tailwind, and canvas2d
 
 ### Running in the browser
 
-- [GitHub Pages deployment](https://idkidk000.github.io/physics-thing/)
+- [GitHub Pages deployment](https://soyaEnjoyer.github.io/physics-thing/)
 
 ### Running the dev server locally
 
